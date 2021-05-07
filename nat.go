@@ -43,11 +43,25 @@ func ctIfElse(on choice, x uint, y uint) uint {
 // The length of both operands must be the same.
 //
 // The length of the operands is the only information leaked.
-func (x *nat) add(on choice, y *nat) {
-	var c uint
+func (x *nat) add(on choice, y *nat) (c uint) {
 	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
 		res := x.limbs[i] + y.limbs[i] + c
 		x.limbs[i] = ctIfElse(on, res&_MASK, x.limbs[i])
 		c = res >> _W
 	}
+	return
+}
+
+// sub returns x -= y, if on == 1, and otherwise does nothing
+//
+// The length of both operands must be the same.
+//
+// The length of the operands is the only information leaked.
+func (x *nat) sub(on choice, y *nat) (c uint) {
+	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
+		res := x.limbs[i] - y.limbs[i] - c
+		x.limbs[i] = ctIfElse(on, res&_MASK, x.limbs[i])
+		c = res >> _W
+	}
+	return
 }

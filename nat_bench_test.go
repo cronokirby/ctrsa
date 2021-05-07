@@ -29,3 +29,15 @@ func BenchmarkModAdd(b *testing.B) {
 		x.add(1, y)
 	}
 }
+
+func BenchmarkModSub(b *testing.B) {
+	b.StopTimer()
+
+	x := makeBenchmarkValue()
+	y := makeBenchmarkValue()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		x.sub(1, y)
+	}
+}
