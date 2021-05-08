@@ -160,13 +160,14 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
 		out.limbs[i] = 0
 	}
 
-	size := len(m.limbs)
 	overflow := uint(0)
-	for i := 0; i < size; i++ {
+	// The different loops are over the same size, but we use different conditions
+	// to try and make the compiler elide bounds checking.
+	for i := 0; i < len(x.limbs); i++ {
 		f := ((out.limbs[0] + x.limbs[i]*y.limbs[0]) * m0inv) & _MASK
 		// Carry fits on 64 bits
 		var carry uint
-		for j := 0; j < size; j++ {
+		for j := 0; j < len(y.limbs) && j < len(m.limbs) && j < len(out.limbs); j++ {
 			hi, lo := bits.Mul(x.limbs[i], y.limbs[j])
 			z_lo, c := bits.Add(out.limbs[j], lo, 0)
 			z_hi, _ := bits.Add(0, hi, c)
@@ -181,7 +182,7 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
 			carry = (z_lo >> _W) | (z_hi << 1)
 		}
 		z, _ := bits.Add(overflow, carry, 0)
-		out.limbs[size-1] = z & _MASK
+		out.limbs[len(out.limbs)-1] = z & _MASK
 		overflow = z >> _W
 	}
 	underflow := 1 ^ out.cmpGeq(m)
