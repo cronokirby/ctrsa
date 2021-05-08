@@ -18,6 +18,22 @@ func TestModSubExamples(t *testing.T) {
 	}
 }
 
+func TestModAddExamples(t *testing.T) {
+	m := &nat{[]uint{13}}
+	x := &nat{[]uint{6}}
+	y := &nat{[]uint{7}}
+	x.modAdd(y, m)
+	expected := &nat{[]uint{0}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+	x.modAdd(y, m)
+	expected = &nat{[]uint{7}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+}
+
 func makeBenchmarkModulus() *nat {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {
