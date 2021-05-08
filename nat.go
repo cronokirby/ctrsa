@@ -136,3 +136,16 @@ func (x *nat) modAdd(y *nat, m *nat) {
 	needSubtraction := ctEq(overflow, uint(underflow))
 	x.sub(needSubtraction, m)
 }
+
+// montgomeryRepresentation calculates x = xR % m, with R := _W^n, with n = len(m)
+//
+// Montgomery multiplication replaces standard modular multiplication for numbers
+// in this representation. This speeds up the multiplication operation in this case.
+func (x *nat) montgomeryRepresentation(m *nat) {
+	// This is a pretty slow way of calculating a representation.
+	// The advantage of doing it with this method is that it doesn't require adding
+	// any extra code. It's also not that bad compared to the cost of exponentiation
+	for i := 0; i < len(m.limbs)*_W; i++ {
+		x.modAdd(x, m)
+	}
+}

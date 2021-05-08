@@ -75,3 +75,15 @@ func BenchmarkModSub(b *testing.B) {
 		x.modSub(y, m)
 	}
 }
+
+func BenchmarkMontgomeryRepr(b *testing.B) {
+	b.StopTimer()
+
+	x := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		x.montgomeryRepresentation(m)
+	}
+}
