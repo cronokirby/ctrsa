@@ -38,7 +38,7 @@ func ctIfElse(on choice, x uint, y uint) uint {
 	return y ^ (mask & (y ^ x))
 }
 
-// add returns x += y, if on == 1, and otherwise does nothing
+// add comptues x += y, if on == 1, and otherwise does nothing
 //
 // The length of both operands must be the same.
 //
@@ -52,7 +52,7 @@ func (x *nat) add(on choice, y *nat) (c uint) {
 	return
 }
 
-// sub returns x -= y, if on == 1, and otherwise does nothing
+// sub computes x -= y, if on == 1, and otherwise does nothing
 //
 // The length of both operands must be the same.
 //
@@ -64,4 +64,14 @@ func (x *nat) sub(on choice, y *nat) (c uint) {
 		c = res >> _W
 	}
 	return
+}
+
+// modSub computes x = (x - y) % m
+//
+// The length of both operands must be the same as the modulus.
+//
+// Both operands must already be reduced modulo m.
+func (x *nat) modSub(y *nat, m *nat) {
+	underflow := x.sub(1, y)
+	x.add(choice(underflow), m)
 }

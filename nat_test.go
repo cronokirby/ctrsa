@@ -35,9 +35,10 @@ func BenchmarkModSub(b *testing.B) {
 
 	x := makeBenchmarkValue()
 	y := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		x.sub(1, y)
+		x.modSub(y, m)
 	}
 }
