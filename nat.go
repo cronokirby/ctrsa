@@ -119,20 +119,3 @@ func (x *nat) modAdd(y *nat, m *nat) {
 	needSubtraction := 1 ^ ctEq(addC, uint(underflow))
 	x.sub(needSubtraction, m)
 }
-
-func (x *nat) ctAssign(on choice, y *nat) {
-	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
-		x.limbs[i] = ctIfElse(on, y.limbs[i], x.limbs[i])
-	}
-}
-
-func (x *nat) modAddWithScratch(y *nat, scratch *nat, m *nat) {
-	addC := x.add(1, y)
-	var c uint
-	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
-		res := x.limbs[i] - y.limbs[i] - c
-		scratch.limbs[i] = res & _MASK
-		c = res >> _W
-	}
-	x.ctAssign(ctEq(addC, c), scratch)
-}

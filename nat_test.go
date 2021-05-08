@@ -47,20 +47,6 @@ func BenchmarkModAdd(b *testing.B) {
 	}
 }
 
-func BenchmarkModAddWithScratch(b *testing.B) {
-	b.StopTimer()
-
-	x := makeBenchmarkValue()
-	y := makeBenchmarkValue()
-	scratch := makeBenchmarkValue()
-	m := makeBenchmarkModulus()
-
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		x.modAddWithScratch(y, scratch, m)
-	}
-}
-
 func BenchmarkModSub(b *testing.B) {
 	b.StopTimer()
 
