@@ -39,10 +39,25 @@ func BenchmarkModAdd(b *testing.B) {
 
 	x := makeBenchmarkValue()
 	y := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		x.add(1, y)
+		x.modAdd(y, m)
+	}
+}
+
+func BenchmarkModAddWithScratch(b *testing.B) {
+	b.StopTimer()
+
+	x := makeBenchmarkValue()
+	y := makeBenchmarkValue()
+	scratch := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		x.modAddWithScratch(y, scratch, m)
 	}
 }
 
