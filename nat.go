@@ -49,6 +49,17 @@ func (x *nat) cmpEq(y *nat) choice {
 	return equal
 }
 
+// cmpGeq calculates x >= y, returning 1 if this holds, and 0 otherwise
+func (x *nat) cmpGeq(y *nat) choice {
+	var c uint
+	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
+		c = (x.limbs[i] - y.limbs[i] - c) >> _W
+	}
+	// If there was a carry, then subtracting y underflowed, so
+	// x is not greater than or equal to y
+	return 1 ^ choice(c)
+}
+
 // ctIfElse returns x if on == 1, and y if on == 0
 //
 // This leaks no information about which branch was chosen.
