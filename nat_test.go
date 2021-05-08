@@ -37,6 +37,18 @@ func TestModAddExamples(t *testing.T) {
 	}
 }
 
+func TestExpExamples(t *testing.T) {
+	m := &nat{[]uint{13}}
+	m0inv := invertModW(13)
+	x := &nat{[]uint{3}}
+	out := &nat{[]uint{0}}
+	out.exp(x, []byte{12}, m, m0inv)
+	expected := &nat{[]uint{1}}
+	if out.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", out, expected)
+	}
+}
+
 func makeBenchmarkModulus() *nat {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {

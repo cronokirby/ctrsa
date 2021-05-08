@@ -9,6 +9,15 @@ const (
 	_MASK = (1 << _W) - 1
 )
 
+func invertModW(x uint) uint {
+	y := x
+	// This is enough for 63 bits, and the extra iteration is not that costly for 31
+	for i := 0; i < 5; i++ {
+		y = y * (2 - x*y)
+	}
+	return y
+}
+
 // nat represents an arbitrary natural number
 type nat struct {
 	// We represent a natural number in base 2^W with W = bits.UintSize - 1.
