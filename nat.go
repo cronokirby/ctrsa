@@ -114,8 +114,25 @@ func (x *nat) modSub(y *nat, m *nat) {
 //
 // Both operands must already be reduced modulo m.
 func (x *nat) modAdd(y *nat, m *nat) {
-	addC := x.add(1, y)
+	overflow := x.add(1, y)
+	// If x < m, then subtraction will underflow
 	underflow := 1 ^ x.cmpGeq(m)
-	needSubtraction := 1 ^ ctEq(addC, uint(underflow))
+	// Three cases are possible:
+	//
+	// overflow = 0, underflow = 0
+	//   In this case, addition fits on our limbs, but we can still subtract away m
+	//   without an underflow, so we need to perform the subtraction to reduce our result.
+	// overflow = 0, underflow = 1
+	//   Our addition fits on our limbs, but we can't subtract m without underflowing.
+	//   Our result is already reduced
+	// overflow = 1, underflow = 1
+	//   Our addition does not fit on our limbs, and we only underflowed because we're not able
+	//   to take away this extra carry bit. We need to subtract m to reduce our result.
+	//
+	// The other case is not possible, because x and y are at most m - 1, so their addition
+	// is at most 2m - 2, and subtracting m once is sufficient to reduce this value. To
+	// see overflow = 1, and underflow = 0, we would need a value where subtracting m more than
+	// once is necessary, which cannot happen.
+	needSubtraction := ctEq(overflow, uint(underflow))
 	x.sub(needSubtraction, m)
 }
