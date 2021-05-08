@@ -28,12 +28,33 @@ type nat struct {
 // The value of choice is always either 1, or 0
 type choice uint
 
+// ctEq compares two uint values for equality
+//
+// This function requires that both x and y fit over _W bits.
+func ctEq(x, y uint) choice {
+	// If x == y, then x ^ y should be all zero bits. We then underflow
+	// when subtracting 1, so the top bit is set. Otherwise, the top
+	// will remain unset, giving us 0.
+	return choice(((x ^ y) - 1) >> _W)
+}
+
+// cmpEq compares two natural numbers for equality
+//
+// Both operands should have the same length.
+func (x *nat) cmpEq(y *nat) choice {
+	equal := choice(1)
+	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
+		equal &= ctEq(x.limbs[i], y.limbs[i])
+	}
+	return equal
+}
+
 // ctIfElse returns x if on == 1, and y if on == 0
 //
 // This leaks no information about which branch was chosen.
 //
 // If on is any value besides 1 or 0, the result is undefined.
-func ctIfElse(on choice, x uint, y uint) uint {
+func ctIfElse(on choice, x, y uint) uint {
 	mask := -uint(on)
 	return y ^ (mask & (y ^ x))
 }

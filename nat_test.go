@@ -2,6 +2,22 @@ package ctrsa
 
 import "testing"
 
+func TestModSubExamples(t *testing.T) {
+	m := &nat{[]uint{13}}
+	x := &nat{[]uint{6}}
+	y := &nat{[]uint{7}}
+	x.modSub(y, m)
+	expected := &nat{[]uint{12}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+	x.modSub(y, m)
+	expected = &nat{[]uint{5}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+}
+
 func makeBenchmarkModulus() *nat {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {
