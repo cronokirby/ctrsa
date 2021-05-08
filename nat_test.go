@@ -1,6 +1,9 @@
 package ctrsa
 
-import "testing"
+import (
+	"math/big"
+	"testing"
+)
 
 func TestModSubExamples(t *testing.T) {
 	m := &nat{[]uint{13}}
@@ -48,6 +51,14 @@ func makeBenchmarkValue() *nat {
 		x[i] = 0x7FFF_FFFF_FFFF_FFFA
 	}
 	return &nat{limbs: x}
+}
+
+func makeBenchmarkExponent() []byte {
+	e := make([]byte, 256)
+	for i := 0; i < 32; i++ {
+		e[i] = 0xFF
+	}
+	return e
 }
 
 func BenchmarkModAdd(b *testing.B) {
@@ -99,5 +110,36 @@ func BenchmarkMontgomeryMul(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		out.montgomeryMul(x, y, m, 0xABCD)
+	}
+}
+
+func BenchmarkExpBig(b *testing.B) {
+	b.StopTimer()
+
+	out := new(big.Int)
+	exponentBytes := makeBenchmarkExponent()
+	x := new(big.Int).SetBytes(exponentBytes)
+	e := new(big.Int).SetBytes(exponentBytes)
+	n := new(big.Int).SetBytes(exponentBytes)
+	one := new(big.Int).SetUint64(1)
+	n.Add(n, one)
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		out.Exp(x, e, n)
+	}
+}
+
+func BenchmarkExp(b *testing.B) {
+	b.StopTimer()
+
+	x := makeBenchmarkValue()
+	e := makeBenchmarkExponent()
+	out := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		out.exp(x, e, m, m.limbs[0])
 	}
 }

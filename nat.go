@@ -70,6 +70,18 @@ func ctIfElse(on choice, x, y uint) uint {
 	return y ^ (mask & (y ^ x))
 }
 
+func (x *nat) clone() *nat {
+	out := &nat{make([]uint, len(x.limbs))}
+	copy(out.limbs, x.limbs)
+	return out
+}
+
+func (x *nat) assign(on choice, y *nat) {
+	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
+		x.limbs[i] = ctIfElse(on, y.limbs[i], x.limbs[i])
+	}
+}
+
 // add comptues x += y, if on == 1, and otherwise does nothing
 //
 // The length of both operands must be the same.
@@ -189,4 +201,24 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
 	// See modAdd
 	needSubtraction := ctEq(overflow, uint(underflow))
 	out.sub(needSubtraction, m)
+}
+
+func (out *nat) exp(x *nat, e []byte, m *nat, m0inv uint) {
+	xSquared := x.clone()
+	xSquared.montgomeryRepresentation(m)
+	scratch := &nat{make([]uint, len(m.limbs))}
+	scratch.limbs[0] = 1
+	for i := len(e) - 1; i >= 0; i-- {
+		b := e[i]
+		for j := 0; j < 8; j++ {
+			selectMultiply := choice(b & 1)
+			scratch.montgomeryMul(out, xSquared, m, m0inv)
+			out.assign(selectMultiply, scratch)
+			scratch.montgomeryMul(xSquared, xSquared, m, m0inv)
+			tmp := scratch
+			scratch = xSquared
+			xSquared = tmp
+			b >>= 1
+		}
+	}
 }
