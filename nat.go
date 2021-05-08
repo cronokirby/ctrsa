@@ -137,7 +137,7 @@ func (x *nat) modAdd(y *nat, m *nat) {
 	x.sub(needSubtraction, m)
 }
 
-// montgomeryRepresentation calculates x = xR % m, with R := _W^n, with n = len(m)
+// montgomeryRepresentation calculates x = xR % m, with R := _W^n, and n = len(m)
 //
 // Montgomery multiplication replaces standard modular multiplication for numbers
 // in this representation. This speeds up the multiplication operation in this case.
@@ -148,4 +148,44 @@ func (x *nat) montgomeryRepresentation(m *nat) {
 	for i := 0; i < len(m.limbs)*_W; i++ {
 		x.modAdd(x, m)
 	}
+}
+
+// montgomeryMul calculates out = xy / R % m, with R := _W^n, and n = len(m)
+//
+// This is faster than your standard modular multiplication.
+//
+// All inputs should be the same length, and not alias eachother.
+func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
+	for i := 0; i < len(out.limbs); i++ {
+		out.limbs[i] = 0
+	}
+
+	size := len(m.limbs)
+	overflow := uint(0)
+	for i := 0; i < size; i++ {
+		f := ((out.limbs[0] + x.limbs[i]*y.limbs[0]) * m0inv) & _MASK
+		// Carry fits on 64 bits
+		var carry uint
+		for j := 0; j < size; j++ {
+			hi, lo := bits.Mul(x.limbs[i], y.limbs[j])
+			z_lo, c := bits.Add(out.limbs[j], lo, 0)
+			z_hi, _ := bits.Add(0, hi, c)
+			hi, lo = bits.Mul(f, m.limbs[j])
+			z_lo, c = bits.Add(z_lo, lo, 0)
+			z_hi, _ = bits.Add(z_hi, hi, c)
+			z_lo, c = bits.Add(z_lo, carry, 0)
+			z_hi, _ = bits.Add(z_hi, 0, c)
+			if j > 0 {
+				out.limbs[j-1] = z_lo & _MASK
+			}
+			carry = (z_lo >> _W) | (z_hi << 1)
+		}
+		z, _ := bits.Add(overflow, carry, 0)
+		out.limbs[size-1] = z & _MASK
+		overflow = z >> _W
+	}
+	underflow := 1 ^ out.cmpGeq(m)
+	// See modAdd
+	needSubtraction := ctEq(overflow, uint(underflow))
+	out.sub(needSubtraction, m)
 }

@@ -87,3 +87,17 @@ func BenchmarkMontgomeryRepr(b *testing.B) {
 		x.montgomeryRepresentation(m)
 	}
 }
+
+func BenchmarkMontgomeryMul(b *testing.B) {
+	b.StopTimer()
+
+	x := makeBenchmarkValue()
+	y := makeBenchmarkValue()
+	out := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		out.montgomeryMul(x, y, m, 0xABCD)
+	}
+}
