@@ -290,3 +290,11 @@ func natFromBig(x *big.Int) *nat {
 	}
 	return out
 }
+
+func (x *nat) bytes() []byte {
+	return x.toBig().Bytes()
+}
+
+func natFromBytes(bytes []byte) *nat {
+	return natFromBig(new(big.Int).SetBytes(bytes))
+}

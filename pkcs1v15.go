@@ -58,8 +58,8 @@ func EncryptPKCS1v15(rand io.Reader, pub *PublicKey, msg []byte) ([]byte, error)
 	em[len(em)-len(msg)-1] = 0
 	copy(mm, msg)
 
-	m := new(big.Int).SetBytes(em)
-	c := encrypt(new(big.Int), pub, m)
+	m := natFromBytes(em)
+	c := encrypt(new(nat), pub, m).toBig()
 
 	return c.FillBytes(em), nil
 }
@@ -282,8 +282,8 @@ func VerifyPKCS1v15(pub *PublicKey, hash crypto.Hash, hashed []byte, sig []byte)
 		return ErrVerification
 	}
 
-	c := new(big.Int).SetBytes(sig)
-	m := encrypt(new(big.Int), pub, c)
+	c := natFromBytes(sig)
+	m := encrypt(new(nat), pub, c).toBig()
 	em := m.FillBytes(make([]byte, k))
 	// EM = 0x00 || 0x01 || PS || 0x00 || T
 

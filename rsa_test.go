@@ -111,15 +111,15 @@ func testKeyBasics(t *testing.T, priv *PrivateKey) {
 	}
 
 	pub := &priv.PublicKey
-	m := big.NewInt(42)
-	c := encrypt(new(big.Int), pub, m)
+	m := natFromBytes([]byte{42})
+	c := encrypt(new(nat), pub, m).toBig()
 
 	m2, err := decrypt(nil, priv, c)
 	if err != nil {
 		t.Errorf("error while decrypting: %s", err)
 		return
 	}
-	if m.Cmp(m2) != 0 {
+	if m.toBig().Cmp(m2) != 0 {
 		t.Errorf("got:%v, want:%v (%+v)", m2, m, priv)
 	}
 
@@ -127,7 +127,7 @@ func testKeyBasics(t *testing.T, priv *PrivateKey) {
 	if err != nil {
 		t.Errorf("error while decrypting (blind): %s", err)
 	}
-	if m.Cmp(m3) != 0 {
+	if m.toBig().Cmp(m3) != 0 {
 		t.Errorf("(blind) got:%v, want:%v (%#v)", m3, m, priv)
 	}
 }

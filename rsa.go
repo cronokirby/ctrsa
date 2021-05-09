@@ -386,12 +386,10 @@ func mgf1XOR(out []byte, hash hash.Hash, seed []byte) {
 // too large for the size of the public key.
 var ErrMessageTooLong = errors.New("crypto/rsa: message too long for RSA public key size")
 
-func encrypt(c *big.Int, pub *PublicKey, m *big.Int) *big.Int {
-	mModN := new(big.Int)
-	mModN.Mod(m, pub.N)
+func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
 	nNat := natFromBig(pub.N)
 	size := len(nNat.limbs)
-	mNat := natFromBig(m).expand(size)
+	mNat := m.clone().expand(size)
 
 	// This calculation leaks information about e, but it's public, so this is ok
 	e64 := uint64(pub.E)
@@ -404,7 +402,7 @@ func encrypt(c *big.Int, pub *PublicKey, m *big.Int) *big.Int {
 
 	cNat := new(nat).expand(size)
 	cNat.exp(mNat, e, nNat, minusInverseModW(nNat.limbs[0]))
-	return cNat.toBig()
+	return cNat
 }
 
 // EncryptOAEP encrypts the given message with RSA-OAEP.
@@ -454,12 +452,13 @@ func EncryptOAEP(hash hash.Hash, random io.Reader, pub *PublicKey, msg []byte, l
 	mgf1XOR(db, hash, seed)
 	mgf1XOR(seed, hash, db)
 
-	m := new(big.Int)
-	m.SetBytes(em)
-	c := encrypt(new(big.Int), pub, m)
+	m := natFromBytes(em)
+	c := encrypt(new(nat), pub, m)
 
 	out := make([]byte, k)
-	return c.FillBytes(out), nil
+	bytes := c.bytes()
+	copy(out[k-len(bytes):], bytes)
+	return out, nil
 }
 
 // ErrDecryption represents a failure to decrypt a message.
@@ -532,7 +531,7 @@ func decryptAndCheck(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int
 
 	// In order to defend against errors in the CRT computation, m^e is
 	// calculated, which should match the original ciphertext.
-	check := encrypt(new(big.Int), &priv.PublicKey, m)
+	check := encrypt(new(nat), &priv.PublicKey, natFromBig(m)).toBig()
 	if c.Cmp(check) != 0 {
 		return nil, errors.New("rsa: internal error")
 	}

@@ -291,8 +291,8 @@ func VerifyPSS(pub *PublicKey, hash crypto.Hash, digest []byte, sig []byte, opts
 	if len(sig) != pub.Size() {
 		return ErrVerification
 	}
-	s := new(big.Int).SetBytes(sig)
-	m := encrypt(new(big.Int), pub, s)
+	s := natFromBytes(sig)
+	m := encrypt(new(nat), pub, s).toBig()
 	emBits := pub.N.BitLen() - 1
 	emLen := (emBits + 7) / 8
 	if m.BitLen() > emLen*8 {
