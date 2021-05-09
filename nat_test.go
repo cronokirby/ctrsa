@@ -1,7 +1,6 @@
 package ctrsa
 
 import (
-	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -18,7 +17,6 @@ func (*nat) Generate(r *rand.Rand, size int) reflect.Value {
 }
 
 func testModAddCommutative(a *nat, b *nat) bool {
-	fmt.Println("a", a, "b", b)
 	m := &nat{make([]uint, len(a.limbs))}
 	for i := 0; i < len(m.limbs); i++ {
 		m.limbs[i] = 0x7FFF_FFFF_FFFF_FFFF
@@ -32,6 +30,24 @@ func testModAddCommutative(a *nat, b *nat) bool {
 
 func TestModAddCommutative(t *testing.T) {
 	err := quick.Check(testModAddCommutative, &quick.Config{})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func testModSubThenAddIdentity(a *nat, b *nat) bool {
+	m := &nat{make([]uint, len(a.limbs))}
+	for i := 0; i < len(m.limbs); i++ {
+		m.limbs[i] = 0x7FFF_FFFF_FFFF_FFFF
+	}
+	original := a.clone()
+	a.modSub(b, m)
+	a.modAdd(b, m)
+	return a.cmpEq(original) == 1
+}
+
+func TestModSubThenAddIdentity(t *testing.T) {
+	err := quick.Check(testModSubThenAddIdentity, &quick.Config{})
 	if err != nil {
 		t.Error(err)
 	}
