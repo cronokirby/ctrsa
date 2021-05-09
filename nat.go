@@ -240,19 +240,42 @@ func (x *nat) toBig() *big.Int {
 	bitSize := len(x.limbs) * _W
 	requiredLimbs := (bitSize + bits.UintSize - 1) / bits.UintSize
 
-	limbs := make([]big.Word, requiredLimbs)
+	out := make([]big.Word, requiredLimbs)
 	shift := big.Word(0)
-	limbI := 0
+	outI := 0
 	for i := 0; i < len(x.limbs); i++ {
 		xi := big.Word(x.limbs[i])
-		limbs[limbI] |= xi << shift
-		topShift := 64 - shift
+		out[outI] |= xi << shift
+		topShift := bits.UintSize - shift
 		if topShift <= _W {
-			limbI++
-			limbs[limbI] = xi >> topShift
+			outI++
+			out[outI] = xi >> topShift
 		}
 		shift = (shift + _W) % bits.UintSize
 	}
 
-	return new(big.Int).SetBits(limbs)
+	return new(big.Int).SetBits(out)
+}
+
+func natFromBig(x *big.Int) *nat {
+	xLimbs := x.Bits()
+	bitSize := len(xLimbs) * bits.UintSize
+	requiredLimbs := (bitSize + _W - 1) / _W
+
+	out := &nat{make([]uint, requiredLimbs)}
+	// shift is < _W
+	shift := uint(0)
+	outI := 0
+	for i := 0; i < len(xLimbs); i++ {
+		xi := uint(xLimbs[i])
+		out.limbs[outI] |= (xi << shift) & _MASK
+		outI++
+		out.limbs[outI] = (xi >> (_W - shift))
+		shift++
+		if shift >= _W {
+			shift -= _W
+			outI++
+		}
+	}
+	return out
 }
