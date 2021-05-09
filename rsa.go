@@ -508,40 +508,14 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 		return nil, ErrDecryption
 	}
 
-	var ir *big.Int
-	if random != nil {
-		randutil.MaybeReadByte(random)
-
-		// Blinding enabled. Blinding involves multiplying c by r^e.
-		// Then the decryption operation performs (m^e * r^e)^d mod n
-		// which equals mr mod n. The factor of r can then be removed
-		// by multiplying by the multiplicative inverse of r.
-
-		var r *big.Int
-		ir = new(big.Int)
-		for {
-			r, err = rand.Int(random, priv.N)
-			if err != nil {
-				return
-			}
-			if r.Cmp(bigZero) == 0 {
-				r = bigOne
-			}
-			ok := ir.ModInverse(r, priv.N)
-			if ok != nil {
-				break
-			}
-		}
-		bigE := big.NewInt(int64(priv.E))
-		rpowe := new(big.Int).Exp(r, bigE, priv.N) // N != 0
-		cCopy := new(big.Int).Set(c)
-		cCopy.Mul(cCopy, rpowe)
-		cCopy.Mod(cCopy, priv.N)
-		c = cCopy
-	}
-
 	if priv.Precomputed.Dp == nil {
-		m = new(big.Int).Exp(c, priv.D, priv.N)
+		nNat := natFromBig(priv.N)
+		size := len(nNat.limbs)
+		cNat := natFromBig(c)
+		cNat.expand(size)
+		out := &nat{make([]uint, size)}
+		out.exp(cNat, priv.D.Bytes(), nNat, minusInverseModW(nNat.limbs[0]))
+		m = out.toBig()
 	} else {
 		// We have the precalculated values needed for the CRT.
 		m = new(big.Int).Exp(c, priv.Precomputed.Dp, priv.Primes[0])
@@ -567,12 +541,6 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 			m2.Mul(m2, values.R)
 			m.Add(m, m2)
 		}
-	}
-
-	if ir != nil {
-		// Unblind.
-		m.Mul(m, ir)
-		m.Mod(m, priv.N)
 	}
 
 	return
