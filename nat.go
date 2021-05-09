@@ -11,13 +11,13 @@ const (
 	_MASK = (1 << _W) - 1
 )
 
-func invertModW(x uint) uint {
+func minusInverseModW(x uint) uint {
 	y := x
 	// This is enough for 63 bits, and the extra iteration is not that costly for 31
 	for i := 0; i < 5; i++ {
-		y = y * (2 - x*y)
+		y = (y * (2 - x*y)) & _MASK
 	}
-	return y
+	return (1 << _W) - y
 }
 
 // nat represents an arbitrary natural number

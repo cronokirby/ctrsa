@@ -53,6 +53,25 @@ func TestModSubThenAddIdentity(t *testing.T) {
 	}
 }
 
+func testMontgomeryRoundtrip(a *nat) bool {
+	one := &nat{make([]uint, len(a.limbs))}
+	one.limbs[0] = 1
+	m := a.clone()
+	m.add(1, one)
+	monty := a.clone()
+	monty.montgomeryRepresentation(m)
+	aAgain := monty.clone()
+	aAgain.montgomeryMul(monty, one, m, minusInverseModW(m.limbs[0]))
+	return a.cmpEq(aAgain) == 1
+}
+
+func TestMontgomeryRoundtrip(t *testing.T) {
+	err := quick.Check(testMontgomeryRoundtrip, &quick.Config{})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestModSubExamples(t *testing.T) {
 	m := &nat{[]uint{13}}
 	x := &nat{[]uint{6}}
@@ -87,7 +106,7 @@ func TestModAddExamples(t *testing.T) {
 
 func TestExpExamples(t *testing.T) {
 	m := &nat{[]uint{13}}
-	m0inv := invertModW(13)
+	m0inv := minusInverseModW(13)
 	x := &nat{[]uint{3}}
 	out := &nat{[]uint{0}}
 	out.exp(x, []byte{12}, m, m0inv)
