@@ -216,7 +216,7 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
 			}
 			carry = (z_lo >> _W) | (z_hi << 1)
 		}
-		z, _ := bits.Add(overflow, carry, 0)
+		z := overflow + carry
 		out.limbs[len(out.limbs)-1] = z & _MASK
 		overflow = z >> _W
 	}
