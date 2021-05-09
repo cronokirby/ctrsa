@@ -229,9 +229,7 @@ func (out *nat) exp(x *nat, e []byte, m *nat, m0inv uint) {
 			scratch.montgomeryMul(out, xSquared, m, m0inv)
 			out.assign(selectMultiply, scratch)
 			scratch.montgomeryMul(xSquared, xSquared, m, m0inv)
-			tmp := scratch
-			scratch = xSquared
-			xSquared = tmp
+			scratch, xSquared = xSquared, scratch
 			b >>= 1
 		}
 	}
