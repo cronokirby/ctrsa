@@ -1,6 +1,8 @@
 package ctrsa
 
-import "math/bits"
+import (
+	"math/bits"
+)
 
 const (
 	// The number of bits we use for our limbs
@@ -215,8 +217,11 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
 func (out *nat) exp(x *nat, e []byte, m *nat, m0inv uint) {
 	xSquared := x.clone()
 	xSquared.montgomeryRepresentation(m)
+	for i := 0; i < len(out.limbs); i++ {
+		out.limbs[i] = 0
+	}
+	out.limbs[0] = 1
 	scratch := &nat{make([]uint, len(m.limbs))}
-	scratch.limbs[0] = 1
 	for i := len(e) - 1; i >= 0; i-- {
 		b := e[i]
 		for j := 0; j < 8; j++ {
