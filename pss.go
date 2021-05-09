@@ -218,7 +218,7 @@ func signPSSWithSalt(rand io.Reader, priv *PrivateKey, hash crypto.Hash, hashed,
 		return nil, err
 	}
 	s := make([]byte, priv.Size())
-	return c.toBig().FillBytes(s), nil
+	return c.fillBytes(s), nil
 }
 
 const (

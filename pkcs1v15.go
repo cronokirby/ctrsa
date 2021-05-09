@@ -148,7 +148,7 @@ func decryptPKCS1v15(rand io.Reader, priv *PrivateKey, ciphertext []byte) (valid
 		return
 	}
 
-	em = m.toBig().FillBytes(make([]byte, k))
+	em = m.fillBytes(make([]byte, k))
 	firstByteIsZero := subtle.ConstantTimeByteEq(em[0], 0)
 	secondByteIsTwo := subtle.ConstantTimeByteEq(em[1], 2)
 
@@ -254,7 +254,7 @@ func SignPKCS1v15(rand io.Reader, priv *PrivateKey, hash crypto.Hash, hashed []b
 		return nil, err
 	}
 
-	return c.toBig().FillBytes(em), nil
+	return c.fillBytes(em), nil
 }
 
 // VerifyPKCS1v15 verifies an RSA PKCS #1 v1.5 signature.

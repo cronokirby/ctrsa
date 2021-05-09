@@ -456,9 +456,7 @@ func EncryptOAEP(hash hash.Hash, random io.Reader, pub *PublicKey, msg []byte, l
 	c := encrypt(new(nat), pub, m)
 
 	out := make([]byte, k)
-	bytes := c.bytes()
-	copy(out[k-len(bytes):], bytes)
-	return out, nil
+	return c.fillBytes(out), nil
 }
 
 // ErrDecryption represents a failure to decrypt a message.
@@ -572,7 +570,7 @@ func DecryptOAEP(hash hash.Hash, random io.Reader, priv *PrivateKey, ciphertext 
 
 	// We probably leak the number of leading zeros.
 	// It's not clear that we can do anything about this.
-	em := m.toBig().FillBytes(make([]byte, k))
+	em := m.fillBytes(make([]byte, k))
 
 	firstByteIsZero := subtle.ConstantTimeByteEq(em[0], 0)
 
