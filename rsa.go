@@ -514,39 +514,12 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 		return nil, ErrDecryption
 	}
 
-	if priv.Precomputed.Dp == nil {
-		nNat := natFromBig(priv.N)
-		size := len(nNat.limbs)
-		cNat := natFromBig(c).expand(size)
-		out := new(nat).expand(size)
-		out.exp(cNat, priv.D.Bytes(), nNat, minusInverseModW(nNat.limbs[0]))
-		m = out.toBig()
-	} else {
-		// We have the precalculated values needed for the CRT.
-		m = new(big.Int).Exp(c, priv.Precomputed.Dp, priv.Primes[0])
-		m2 := new(big.Int).Exp(c, priv.Precomputed.Dq, priv.Primes[1])
-		m.Sub(m, m2)
-		if m.Sign() < 0 {
-			m.Add(m, priv.Primes[0])
-		}
-		m.Mul(m, priv.Precomputed.Qinv)
-		m.Mod(m, priv.Primes[0])
-		m.Mul(m, priv.Primes[1])
-		m.Add(m, m2)
-
-		for i, values := range priv.Precomputed.CRTValues {
-			prime := priv.Primes[2+i]
-			m2.Exp(c, values.Exp, prime)
-			m2.Sub(m2, m)
-			m2.Mul(m2, values.Coeff)
-			m2.Mod(m2, prime)
-			if m2.Sign() < 0 {
-				m2.Add(m2, prime)
-			}
-			m2.Mul(m2, values.R)
-			m.Add(m, m2)
-		}
-	}
+	nNat := natFromBig(priv.N)
+	size := len(nNat.limbs)
+	cNat := natFromBig(c).expand(size)
+	out := new(nat).expand(size)
+	out.exp(cNat, priv.D.Bytes(), nNat, minusInverseModW(nNat.limbs[0]))
+	m = out.toBig()
 
 	return
 }
