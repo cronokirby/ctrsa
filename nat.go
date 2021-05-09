@@ -35,7 +35,7 @@ type nat struct {
 	limbs []uint
 }
 
-func (x *nat) expand(size int) {
+func (x *nat) expand(size int) *nat {
 	if cap(x.limbs) < size {
 		newLimbs := make([]uint, size)
 		copy(newLimbs, x.limbs)
@@ -43,6 +43,7 @@ func (x *nat) expand(size int) {
 	} else {
 		x.limbs = x.limbs[:size]
 	}
+	return x
 }
 
 // choice represents a constant-time condition

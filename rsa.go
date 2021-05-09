@@ -391,12 +391,11 @@ func encrypt(c *big.Int, pub *PublicKey, m *big.Int) *big.Int {
 	mModN.Mod(m, pub.N)
 	nNat := natFromBig(pub.N)
 	size := len(nNat.limbs)
-	mNat := natFromBig(m)
-	mNat.expand(size)
+	mNat := natFromBig(m).expand(size)
 	// Note: could use fewer bytes by checking the modulus here
 	e := make([]byte, 8)
 	binary.BigEndian.PutUint64(e, uint64(pub.E))
-	cNat := &nat{make([]uint, size)}
+	cNat := new(nat).expand(size)
 	cNat.exp(mNat, e, nNat, minusInverseModW(nNat.limbs[0]))
 	return cNat.toBig()
 }
@@ -511,9 +510,8 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 	if priv.Precomputed.Dp == nil {
 		nNat := natFromBig(priv.N)
 		size := len(nNat.limbs)
-		cNat := natFromBig(c)
-		cNat.expand(size)
-		out := &nat{make([]uint, size)}
+		cNat := natFromBig(c).expand(size)
+		out := new(nat).expand(size)
 		out.exp(cNat, priv.D.Bytes(), nNat, minusInverseModW(nNat.limbs[0]))
 		m = out.toBig()
 	} else {
