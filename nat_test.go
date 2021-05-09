@@ -72,6 +72,20 @@ func TestMontgomeryRoundtrip(t *testing.T) {
 	}
 }
 
+func testConversion(a *nat) bool {
+	aBig := a.toBig()
+	aFromBig := natFromBig(aBig)
+	aBigAgain := aFromBig.toBig()
+	return aBig.Cmp(aBigAgain) == 0
+}
+
+func TestConversion(t *testing.T) {
+	err := quick.Check(testConversion, &quick.Config{})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestModSubExamples(t *testing.T) {
 	m := &nat{[]uint{13}}
 	x := &nat{[]uint{6}}
