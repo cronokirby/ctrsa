@@ -1,9 +1,41 @@
 package ctrsa
 
 import (
+	"fmt"
 	"math/big"
+	"math/rand"
+	"reflect"
 	"testing"
+	"testing/quick"
 )
+
+func (*nat) Generate(r *rand.Rand, size int) reflect.Value {
+	limbs := make([]uint, size)
+	for i := 0; i < size; i++ {
+		limbs[i] = uint(r.Uint64()) & 0x7FFF_FFFF_FFFF_FFFE
+	}
+	return reflect.ValueOf(&nat{limbs})
+}
+
+func testModAddCommutative(a *nat, b *nat) bool {
+	fmt.Println("a", a, "b", b)
+	m := &nat{make([]uint, len(a.limbs))}
+	for i := 0; i < len(m.limbs); i++ {
+		m.limbs[i] = 0x7FFF_FFFF_FFFF_FFFF
+	}
+	aPlusB := a.clone()
+	aPlusB.modAdd(b, m)
+	bPlusA := b.clone()
+	bPlusA.modAdd(a, m)
+	return aPlusB.cmpEq(bPlusA) == 1
+}
+
+func TestModAddCommutative(t *testing.T) {
+	err := quick.Check(testModAddCommutative, &quick.Config{})
+	if err != nil {
+		t.Error(err)
+	}
+}
 
 func TestModSubExamples(t *testing.T) {
 	m := &nat{[]uint{13}}
