@@ -1,6 +1,7 @@
 package ctrsa
 
 import (
+	"math/big"
 	"math/bits"
 )
 
@@ -233,4 +234,25 @@ func (out *nat) exp(x *nat, e []byte, m *nat, m0inv uint) {
 			b >>= 1
 		}
 	}
+}
+
+func (x *nat) toBig() *big.Int {
+	bitSize := len(x.limbs) * _W
+	requiredLimbs := (bitSize + bits.UintSize - 1) / bits.UintSize
+
+	limbs := make([]big.Word, requiredLimbs)
+	shift := big.Word(0)
+	limbI := 0
+	for i := 0; i < len(x.limbs); i++ {
+		xi := big.Word(x.limbs[i])
+		limbs[limbI] |= xi << shift
+		topShift := 64 - shift
+		if topShift <= _W {
+			limbI++
+			limbs[limbI] = xi >> topShift
+		}
+		shift = (shift + _W) % bits.UintSize
+	}
+
+	return new(big.Int).SetBits(limbs)
 }

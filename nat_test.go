@@ -116,6 +116,15 @@ func TestExpExamples(t *testing.T) {
 	}
 }
 
+func TestToBigExamples(t *testing.T) {
+	x := &nat{[]uint{0x7FFF_FFFF_FFFF_FFFF, 3}}
+	actual := x.toBig()
+	expected := new(big.Int).SetBits([]big.Word{0xFFFF_FFFF_FFFF_FFFF, 1})
+	if actual.Cmp(expected) != 0 {
+		t.Errorf("%+v != %+v", actual, expected)
+	}
+}
+
 func makeBenchmarkModulus() *nat {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {
