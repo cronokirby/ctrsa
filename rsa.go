@@ -26,7 +26,9 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"math"
@@ -385,9 +387,18 @@ func mgf1XOR(out []byte, hash hash.Hash, seed []byte) {
 var ErrMessageTooLong = errors.New("crypto/rsa: message too long for RSA public key size")
 
 func encrypt(c *big.Int, pub *PublicKey, m *big.Int) *big.Int {
-	e := big.NewInt(int64(pub.E))
-	c.Exp(m, e, pub.N)
-	return c
+	mModN := new(big.Int)
+	mModN.Mod(m, pub.N)
+	nNat := natFromBig(pub.N)
+	size := len(nNat.limbs)
+	mNat := natFromBig(m)
+	mNat.expand(size)
+	// Note: could use fewer bytes by checking the modulus here
+	e := make([]byte, 8)
+	binary.BigEndian.PutUint64(e, uint64(pub.E))
+	cNat := &nat{make([]uint, size)}
+	cNat.exp(mNat, e, nNat, minusInverseModW(nNat.limbs[0]))
+	return cNat.toBig()
 }
 
 // EncryptOAEP encrypts the given message with RSA-OAEP.
@@ -489,6 +500,7 @@ func (priv *PrivateKey) Precompute() {
 func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err error) {
 	// TODO(agl): can we get away with reusing blinds?
 	if c.Cmp(priv.N) > 0 {
+		fmt.Println("c large", c, "N", priv.N)
 		err = ErrDecryption
 		return
 	}
