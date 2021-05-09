@@ -26,13 +26,13 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/subtle"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"math"
 	"math/big"
+	"math/bits"
 
 	"github.com/cronokirby/ctrsa/internal/randutil"
 )
@@ -392,9 +392,16 @@ func encrypt(c *big.Int, pub *PublicKey, m *big.Int) *big.Int {
 	nNat := natFromBig(pub.N)
 	size := len(nNat.limbs)
 	mNat := natFromBig(m).expand(size)
-	// Note: could use fewer bytes by checking the modulus here
-	e := make([]byte, 8)
-	binary.BigEndian.PutUint64(e, uint64(pub.E))
+
+	// This calculation leaks information about e, but it's public, so this is ok
+	e64 := uint64(pub.E)
+	eBytes := (bits.Len64(e64) + 7) / 8
+	e := make([]byte, eBytes)
+	for i := len(e) - 1; i >= 0; i-- {
+		e[i] = byte(e64)
+		e64 >>= 8
+	}
+
 	cNat := new(nat).expand(size)
 	cNat.exp(mNat, e, nNat, minusInverseModW(nNat.limbs[0]))
 	return cNat.toBig()
