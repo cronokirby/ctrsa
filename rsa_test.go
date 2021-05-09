@@ -112,14 +112,15 @@ func testKeyBasics(t *testing.T, priv *PrivateKey) {
 
 	pub := &priv.PublicKey
 	m := natFromBytes([]byte{42})
-	c := encrypt(new(nat), pub, m).toBig()
+	c := encrypt(new(nat), pub, m)
+	m.expand(len(c.limbs))
 
 	m2, err := decrypt(nil, priv, c)
 	if err != nil {
 		t.Errorf("error while decrypting: %s", err)
 		return
 	}
-	if m.toBig().Cmp(m2) != 0 {
+	if m.cmpEq(m2) != 1 {
 		t.Errorf("got:%v, want:%v (%+v)", m2, m, priv)
 	}
 
@@ -127,7 +128,7 @@ func testKeyBasics(t *testing.T, priv *PrivateKey) {
 	if err != nil {
 		t.Errorf("error while decrypting (blind): %s", err)
 	}
-	if m.toBig().Cmp(m3) != 0 {
+	if m.cmpEq(m3) != 1 {
 		t.Errorf("(blind) got:%v, want:%v (%#v)", m3, m, priv)
 	}
 }
@@ -165,7 +166,7 @@ func BenchmarkRSA2048Decrypt(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		decrypt(nil, test2048Key, c)
+		decrypt(nil, test2048Key, natFromBig(c))
 	}
 }
 
@@ -200,7 +201,7 @@ func Benchmark3PrimeRSA2048Decrypt(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		decrypt(nil, priv, c)
+		decrypt(nil, priv, natFromBig(c))
 	}
 }
 

@@ -9,7 +9,6 @@ import (
 	"crypto/subtle"
 	"errors"
 	"io"
-	"math/big"
 
 	"github.com/cronokirby/ctrsa/internal/randutil"
 )
@@ -143,13 +142,13 @@ func decryptPKCS1v15(rand io.Reader, priv *PrivateKey, ciphertext []byte) (valid
 		return
 	}
 
-	c := new(big.Int).SetBytes(ciphertext)
+	c := natFromBytes(ciphertext)
 	m, err := decrypt(rand, priv, c)
 	if err != nil {
 		return
 	}
 
-	em = m.FillBytes(make([]byte, k))
+	em = m.toBig().FillBytes(make([]byte, k))
 	firstByteIsZero := subtle.ConstantTimeByteEq(em[0], 0)
 	secondByteIsTwo := subtle.ConstantTimeByteEq(em[1], 2)
 
@@ -249,13 +248,13 @@ func SignPKCS1v15(rand io.Reader, priv *PrivateKey, hash crypto.Hash, hashed []b
 	copy(em[k-tLen:k-hashLen], prefix)
 	copy(em[k-hashLen:k], hashed)
 
-	m := new(big.Int).SetBytes(em)
+	m := natFromBytes(em)
 	c, err := decryptAndCheck(rand, priv, m)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.FillBytes(em), nil
+	return c.toBig().FillBytes(em), nil
 }
 
 // VerifyPKCS1v15 verifies an RSA PKCS #1 v1.5 signature.

@@ -12,7 +12,6 @@ import (
 	"errors"
 	"hash"
 	"io"
-	"math/big"
 )
 
 // Per RFC 8017, Section 9.1
@@ -213,13 +212,13 @@ func signPSSWithSalt(rand io.Reader, priv *PrivateKey, hash crypto.Hash, hashed,
 	if err != nil {
 		return nil, err
 	}
-	m := new(big.Int).SetBytes(em)
+	m := natFromBytes(em)
 	c, err := decryptAndCheck(rand, priv, m)
 	if err != nil {
 		return nil, err
 	}
 	s := make([]byte, priv.Size())
-	return c.FillBytes(s), nil
+	return c.toBig().FillBytes(s), nil
 }
 
 const (

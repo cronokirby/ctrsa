@@ -502,9 +502,12 @@ func (priv *PrivateKey) Precompute() {
 
 // decrypt performs an RSA decryption, resulting in a plaintext integer. If a
 // random source is given, RSA blinding is used.
-func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err error) {
+func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 	// TODO(agl): can we get away with reusing blinds?
-	if c.Cmp(priv.N) > 0 {
+	nNat := natFromBig(priv.N)
+	size := len(nNat.limbs)
+	c = c.clone().expand(size)
+	if c.cmpGeq(nNat) == 1 {
 		fmt.Println("c large", c, "N", priv.N)
 		err = ErrDecryption
 		return
@@ -513,17 +516,13 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 		return nil, ErrDecryption
 	}
 
-	nNat := natFromBig(priv.N)
-	size := len(nNat.limbs)
-	cNat := natFromBig(c).expand(size)
-	out := new(nat).expand(size)
-	out.exp(cNat, priv.D.Bytes(), nNat, minusInverseModW(nNat.limbs[0]))
-	m = out.toBig()
+	m = new(nat).expand(size)
+	m.exp(c, priv.D.Bytes(), nNat, minusInverseModW(nNat.limbs[0]))
 
 	return
 }
 
-func decryptAndCheck(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err error) {
+func decryptAndCheck(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 	m, err = decrypt(random, priv, c)
 	if err != nil {
 		return nil, err
@@ -531,8 +530,8 @@ func decryptAndCheck(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int
 
 	// In order to defend against errors in the CRT computation, m^e is
 	// calculated, which should match the original ciphertext.
-	check := encrypt(new(nat), &priv.PublicKey, natFromBig(m)).toBig()
-	if c.Cmp(check) != 0 {
+	check := encrypt(new(nat), &priv.PublicKey, m)
+	if c.cmpEq(check) != 1 {
 		return nil, errors.New("rsa: internal error")
 	}
 	return m, nil
@@ -560,7 +559,7 @@ func DecryptOAEP(hash hash.Hash, random io.Reader, priv *PrivateKey, ciphertext 
 		return nil, ErrDecryption
 	}
 
-	c := new(big.Int).SetBytes(ciphertext)
+	c := natFromBytes(ciphertext)
 
 	m, err := decrypt(random, priv, c)
 	if err != nil {
@@ -573,7 +572,7 @@ func DecryptOAEP(hash hash.Hash, random io.Reader, priv *PrivateKey, ciphertext 
 
 	// We probably leak the number of leading zeros.
 	// It's not clear that we can do anything about this.
-	em := m.FillBytes(make([]byte, k))
+	em := m.toBig().FillBytes(make([]byte, k))
 
 	firstByteIsZero := subtle.ConstantTimeByteEq(em[0], 0)
 
