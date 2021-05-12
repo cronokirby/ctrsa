@@ -1,6 +1,7 @@
 package ctrsa
 
 import (
+	"bytes"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -145,6 +146,18 @@ func TestFromBigExamples(t *testing.T) {
 	actual := natFromBig(theBig)
 	if actual.cmpEq(expected) != 1 {
 		t.Errorf("%+v != %+v", actual, expected)
+	}
+}
+
+func TestFillBytes(t *testing.T) {
+	x := &nat{[]uint{0x7F22_3344_5566_7788, 1}}
+	xBytes := []byte{0xFF, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}
+	for l := 0; l <= len(xBytes); l++ {
+		actual := x.fillBytes(make([]byte, l))
+		expected := xBytes[len(xBytes)-l:]
+		if !bytes.Equal(actual, expected) {
+			t.Errorf("%+v != %+v", actual, expected)
+		}
 	}
 }
 

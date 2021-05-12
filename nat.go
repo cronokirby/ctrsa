@@ -291,8 +291,53 @@ func natFromBig(x *big.Int) *nat {
 	return out
 }
 
+// fillBytes writes out this number as big endian bytes to a buffer
+//
+// If the bytes are not large enough to contain the number, the output is truncated,
+// keeping the least significant bytes that do fit.
 func (x *nat) fillBytes(bytes []byte) []byte {
-	return x.toBig().FillBytes(bytes)
+	outI := len(bytes) - 1
+	fittingLimbs := len(bytes) * 8 / _W
+	var shift uint
+	for _, limb := range x.limbs[:fittingLimbs] {
+		// The number of bits to consume from this limb
+		remainingBits := uint(_W)
+		if shift > 0 {
+			bytes[outI] |= byte(limb) << shift
+			outI--
+			consumed := 8 - shift
+			limb >>= consumed
+			remainingBits -= consumed
+		}
+		// The number of bytes we'll fill completely
+		fullBytes := int(remainingBits >> 3)
+		// The shift for the next round becomes what's left
+		shift = remainingBits & 0b111
+		for i := 0; i < fullBytes; i++ {
+			bytes[outI] = byte(limb)
+			outI--
+			limb >>= 8
+		}
+		bytes[outI] = byte(limb)
+	}
+	// If all of the limbs fit in the bytes, we have nothing left to do
+	if fittingLimbs >= len(x.limbs) {
+		return bytes
+	}
+	// Becuase of how we calculated fittingLimbs, only the last remaining limb
+	// has any potential bits to contribute
+	lastLimb := x.limbs[fittingLimbs]
+	if shift > 0 {
+		bytes[outI] |= byte(lastLimb) << shift
+		outI--
+		lastLimb >>= 8 - shift
+	}
+	for outI >= 0 {
+		bytes[outI] = byte(lastLimb)
+		outI--
+		lastLimb >>= 8
+	}
+	return bytes
 }
 
 func natFromBytes(bytes []byte) *nat {
