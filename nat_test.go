@@ -170,6 +170,20 @@ func TestFromBytes(t *testing.T) {
 	}
 }
 
+func TestDiv(t *testing.T) {
+	var hi, lo uint
+	hi, lo = 0xFFFF, 0xFFFF_FFFF_FFFF_AABB
+	d := uint(0xFFFF_FFFF_FFFF_FFFF)
+	expectedQ, expectedR := uint(0x10000), uint(0xAABB)
+	actualQ, actualR := div(hi, lo, d)
+	if actualQ != expectedQ {
+		t.Errorf("%+v != %+v", actualQ, expectedQ)
+	}
+	if actualR != expectedR {
+		t.Errorf("%+v != %+v", actualR, expectedR)
+	}
+}
+
 func makeBenchmarkModulus() *nat {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {

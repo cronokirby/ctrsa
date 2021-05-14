@@ -116,6 +116,29 @@ func (x *nat) assign(on choice, y *nat) {
 	}
 }
 
+// div calculates the (hi:lo / d, hi:lo % d)
+//
+// All of the inputs are over the full size of uint.
+func div(hi, lo, d uint) (uint, uint) {
+	var quo uint
+	hi = ctIfElse(ctEq(hi, d), 0, hi)
+	for i := bits.UintSize - 1; i > 0; i-- {
+		j := bits.UintSize - i
+		w := (hi << j) | (lo >> i)
+		sel := ctGeq(w, d) | choice(hi>>i)
+		hi2 := (w - d) >> j
+		lo2 := lo - (d << i)
+		hi = ctIfElse(sel, hi2, hi)
+		lo = ctIfElse(sel, lo2, lo)
+		quo |= uint(sel)
+		quo <<= 1
+	}
+	sel := ctGeq(lo, d) | choice(hi)
+	rem := ctIfElse(sel, lo-d, lo)
+	quo |= uint(sel)
+	return quo, rem
+}
+
 // add comptues x += y, if on == 1, and otherwise does nothing
 //
 // The length of both operands must be the same.
