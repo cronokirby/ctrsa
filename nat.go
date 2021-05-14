@@ -340,6 +340,23 @@ func (x *nat) fillBytes(bytes []byte) []byte {
 	return bytes
 }
 
+// natFromBytes converts a slice of big endian bytes into a nat
 func natFromBytes(bytes []byte) *nat {
-	return natFromBig(new(big.Int).SetBytes(bytes))
+	bits := len(bytes) * 8
+	requiredLimbs := (bits + _W - 1) / _W
+	out := &nat{make([]uint, requiredLimbs)}
+	outI := 0
+	shift := 0
+	for i := len(bytes) - 1; i >= 0; i-- {
+		bi := bytes[i]
+		out.limbs[outI] |= uint(bi) << shift
+		shift += 8
+		if shift >= _W {
+			shift -= _W
+			out.limbs[outI] &= _MASK
+			outI++
+			out.limbs[outI] = uint(bi) >> (8 - shift)
+		}
+	}
+	return out
 }
