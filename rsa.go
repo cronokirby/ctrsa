@@ -387,8 +387,8 @@ func mgf1XOR(out []byte, hash hash.Hash, seed []byte) {
 var ErrMessageTooLong = errors.New("crypto/rsa: message too long for RSA public key size")
 
 func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
-	nNat := natFromBig(pub.N)
-	size := len(nNat.limbs)
+	nModulus := modulusFromNat(natFromBig(pub.N))
+	size := len(nModulus.nat.limbs)
 	mNat := m.clone().expand(size)
 
 	// This calculation leaks information about e, but it's public, so this is ok
@@ -401,7 +401,7 @@ func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
 	}
 
 	cNat := new(nat).expand(size)
-	cNat.exp(mNat, e, nNat, minusInverseModW(nNat.limbs[0]))
+	cNat.exp(mNat, e, nModulus)
 	return cNat
 }
 
@@ -502,10 +502,10 @@ func (priv *PrivateKey) Precompute() {
 // random source is given, RSA blinding is used.
 func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 	// TODO(agl): can we get away with reusing blinds?
-	nNat := natFromBig(priv.N)
-	size := len(nNat.limbs)
+	nModulus := modulusFromNat(natFromBig(priv.N))
+	size := len(nModulus.nat.limbs)
 	c = c.clone().expand(size)
-	if c.cmpGeq(nNat) == 1 {
+	if c.cmpGeq(nModulus.nat) == 1 {
 		fmt.Println("c large", c, "N", priv.N)
 		err = ErrDecryption
 		return
@@ -515,7 +515,7 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 	}
 
 	m = new(nat).expand(size)
-	m.exp(c, priv.D.Bytes(), nNat, minusInverseModW(nNat.limbs[0]))
+	m.exp(c, priv.D.Bytes(), nModulus)
 
 	return
 }

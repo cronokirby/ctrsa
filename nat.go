@@ -139,6 +139,36 @@ func div(hi, lo, d uint) (uint, uint) {
 	return quo, rem
 }
 
+// modulus is used for modular arithmetic, precomputed useful constants
+type modulus struct {
+	// The underlying natural number for this modulus.
+	//
+	// This will be stored without any padding.
+	//
+	// The contract here is that this shouldn't alias with any other natural number being used.
+	nat *nat
+	// The number of leading zeros in the modulus
+	leading uint
+	// -nat.limbs[0]^-1 mod _W
+	m0inv uint
+}
+
+// modulusFromNat creates a new modulus from a nat
+//
+// The nat should not be zero, and the number of significant bits in the number should be
+// leakable.
+func modulusFromNat(nat *nat) *modulus {
+	var m modulus
+	m.nat = nat
+	var size uint
+	for size = uint(len(m.nat.limbs)); size > 0 && m.nat.limbs[size-1] == 0; size-- {
+	}
+	m.nat.limbs = m.nat.limbs[:size]
+	m.leading = uint(bits.LeadingZeros(m.nat.limbs[size-1]))
+	m.m0inv = minusInverseModW(m.nat.limbs[0])
+	return &m
+}
+
 // add comptues x += y, if on == 1, and otherwise does nothing
 //
 // The length of both operands must be the same.
@@ -172,9 +202,9 @@ func (x *nat) sub(on choice, y *nat) (c uint) {
 // The length of both operands must be the same as the modulus.
 //
 // Both operands must already be reduced modulo m.
-func (x *nat) modSub(y *nat, m *nat) {
+func (x *nat) modSub(y *nat, m *modulus) {
 	underflow := x.sub(1, y)
-	x.add(choice(underflow), m)
+	x.add(choice(underflow), m.nat)
 }
 
 // modAdd computes x = (x + y) % m
@@ -182,10 +212,10 @@ func (x *nat) modSub(y *nat, m *nat) {
 // The length of both operands must be the same as the modulus.
 //
 // Both operands must already be reduced modulo m.
-func (x *nat) modAdd(y *nat, m *nat) {
+func (x *nat) modAdd(y *nat, m *modulus) {
 	overflow := x.add(1, y)
 	// If x < m, then subtraction will underflow
-	underflow := 1 ^ x.cmpGeq(m)
+	underflow := 1 ^ x.cmpGeq(m.nat)
 	// Three cases are possible:
 	//
 	// overflow = 0, underflow = 0
@@ -203,18 +233,18 @@ func (x *nat) modAdd(y *nat, m *nat) {
 	// see overflow = 1, and underflow = 0, we would need a value where subtracting m more than
 	// once is necessary, which cannot happen.
 	needSubtraction := ctEq(overflow, uint(underflow))
-	x.sub(needSubtraction, m)
+	x.sub(needSubtraction, m.nat)
 }
 
 // montgomeryRepresentation calculates x = xR % m, with R := _W^n, and n = len(m)
 //
 // Montgomery multiplication replaces standard modular multiplication for numbers
 // in this representation. This speeds up the multiplication operation in this case.
-func (x *nat) montgomeryRepresentation(m *nat) {
+func (x *nat) montgomeryRepresentation(m *modulus) {
 	// This is a pretty slow way of calculating a representation.
 	// The advantage of doing it with this method is that it doesn't require adding
 	// any extra code. It's also not that bad compared to the cost of exponentiation
-	for i := 0; i < len(m.limbs)*_W; i++ {
+	for i := 0; i < len(m.nat.limbs)*_W; i++ {
 		x.modAdd(x, m)
 	}
 }
@@ -224,7 +254,7 @@ func (x *nat) montgomeryRepresentation(m *nat) {
 // This is faster than your standard modular multiplication.
 //
 // All inputs should be the same length, and not alias eachother.
-func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
+func (out *nat) montgomeryMul(x *nat, y *nat, m *modulus) {
 	for i := 0; i < len(out.limbs); i++ {
 		out.limbs[i] = 0
 	}
@@ -233,14 +263,14 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
 	// The different loops are over the same size, but we use different conditions
 	// to try and make the compiler elide bounds checking.
 	for i := 0; i < len(x.limbs); i++ {
-		f := ((out.limbs[0] + x.limbs[i]*y.limbs[0]) * m0inv) & _MASK
+		f := ((out.limbs[0] + x.limbs[i]*y.limbs[0]) * m.m0inv) & _MASK
 		// Carry fits on 64 bits
 		var carry uint
-		for j := 0; j < len(y.limbs) && j < len(m.limbs) && j < len(out.limbs); j++ {
+		for j := 0; j < len(y.limbs) && j < len(m.nat.limbs) && j < len(out.limbs); j++ {
 			hi, lo := bits.Mul(x.limbs[i], y.limbs[j])
 			z_lo, c := bits.Add(out.limbs[j], lo, 0)
 			z_hi, _ := bits.Add(0, hi, c)
-			hi, lo = bits.Mul(f, m.limbs[j])
+			hi, lo = bits.Mul(f, m.nat.limbs[j])
 			z_lo, c = bits.Add(z_lo, lo, 0)
 			z_hi, _ = bits.Add(z_hi, hi, c)
 			z_lo, c = bits.Add(z_lo, carry, 0)
@@ -254,27 +284,27 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *nat, m0inv uint) {
 		out.limbs[len(out.limbs)-1] = z & _MASK
 		overflow = z >> _W
 	}
-	underflow := 1 ^ out.cmpGeq(m)
+	underflow := 1 ^ out.cmpGeq(m.nat)
 	// See modAdd
 	needSubtraction := ctEq(overflow, uint(underflow))
-	out.sub(needSubtraction, m)
+	out.sub(needSubtraction, m.nat)
 }
 
-func (out *nat) exp(x *nat, e []byte, m *nat, m0inv uint) {
+func (out *nat) exp(x *nat, e []byte, m *modulus) {
 	xSquared := x.clone()
 	xSquared.montgomeryRepresentation(m)
 	for i := 0; i < len(out.limbs); i++ {
 		out.limbs[i] = 0
 	}
 	out.limbs[0] = 1
-	scratch := &nat{make([]uint, len(m.limbs))}
+	scratch := &nat{make([]uint, len(m.nat.limbs))}
 	for i := len(e) - 1; i >= 0; i-- {
 		b := e[i]
 		for j := 0; j < 8; j++ {
 			selectMultiply := choice(b & 1)
-			scratch.montgomeryMul(out, xSquared, m, m0inv)
+			scratch.montgomeryMul(out, xSquared, m)
 			out.assign(selectMultiply, scratch)
-			scratch.montgomeryMul(xSquared, xSquared, m, m0inv)
+			scratch.montgomeryMul(xSquared, xSquared, m)
 			scratch, xSquared = xSquared, scratch
 			b >>= 1
 		}

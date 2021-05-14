@@ -18,10 +18,11 @@ func (*nat) Generate(r *rand.Rand, size int) reflect.Value {
 }
 
 func testModAddCommutative(a *nat, b *nat) bool {
-	m := &nat{make([]uint, len(a.limbs))}
-	for i := 0; i < len(m.limbs); i++ {
-		m.limbs[i] = 0x7FFF_FFFF_FFFF_FFFF
+	mLimbs := make([]uint, len(a.limbs))
+	for i := 0; i < len(mLimbs); i++ {
+		mLimbs[i] = 0x7FFF_FFFF_FFFF_FFFF
 	}
+	m := modulusFromNat(&nat{mLimbs})
 	aPlusB := a.clone()
 	aPlusB.modAdd(b, m)
 	bPlusA := b.clone()
@@ -37,10 +38,11 @@ func TestModAddCommutative(t *testing.T) {
 }
 
 func testModSubThenAddIdentity(a *nat, b *nat) bool {
-	m := &nat{make([]uint, len(a.limbs))}
-	for i := 0; i < len(m.limbs); i++ {
-		m.limbs[i] = 0x7FFF_FFFF_FFFF_FFFF
+	mLimbs := make([]uint, len(a.limbs))
+	for i := 0; i < len(mLimbs); i++ {
+		mLimbs[i] = 0x7FFF_FFFF_FFFF_FFFF
 	}
+	m := modulusFromNat(&nat{mLimbs})
 	original := a.clone()
 	a.modSub(b, m)
 	a.modAdd(b, m)
@@ -57,12 +59,13 @@ func TestModSubThenAddIdentity(t *testing.T) {
 func testMontgomeryRoundtrip(a *nat) bool {
 	one := &nat{make([]uint, len(a.limbs))}
 	one.limbs[0] = 1
-	m := a.clone()
-	m.add(1, one)
+	aPlusOne := a.clone()
+	aPlusOne.add(1, one)
+	m := modulusFromNat(aPlusOne)
 	monty := a.clone()
 	monty.montgomeryRepresentation(m)
 	aAgain := monty.clone()
-	aAgain.montgomeryMul(monty, one, m, minusInverseModW(m.limbs[0]))
+	aAgain.montgomeryMul(monty, one, m)
 	return a.cmpEq(aAgain) == 1
 }
 
@@ -88,7 +91,7 @@ func TestConversion(t *testing.T) {
 }
 
 func TestModSubExamples(t *testing.T) {
-	m := &nat{[]uint{13}}
+	m := modulusFromNat(&nat{[]uint{13}})
 	x := &nat{[]uint{6}}
 	y := &nat{[]uint{7}}
 	x.modSub(y, m)
@@ -104,7 +107,7 @@ func TestModSubExamples(t *testing.T) {
 }
 
 func TestModAddExamples(t *testing.T) {
-	m := &nat{[]uint{13}}
+	m := modulusFromNat(&nat{[]uint{13}})
 	x := &nat{[]uint{6}}
 	y := &nat{[]uint{7}}
 	x.modAdd(y, m)
@@ -120,11 +123,10 @@ func TestModAddExamples(t *testing.T) {
 }
 
 func TestExpExamples(t *testing.T) {
-	m := &nat{[]uint{13}}
-	m0inv := minusInverseModW(13)
+	m := modulusFromNat(&nat{[]uint{13}})
 	x := &nat{[]uint{3}}
 	out := &nat{[]uint{0}}
-	out.exp(x, []byte{12}, m, m0inv)
+	out.exp(x, []byte{12}, m)
 	expected := &nat{[]uint{1}}
 	if out.cmpEq(expected) != 1 {
 		t.Errorf("%+v != %+v", out, expected)
@@ -184,12 +186,12 @@ func TestDiv(t *testing.T) {
 	}
 }
 
-func makeBenchmarkModulus() *nat {
+func makeBenchmarkModulus() *modulus {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {
 		m[i] = 0x7FFF_FFFF_FFFF_FFFF
 	}
-	return &nat{limbs: m}
+	return modulusFromNat(&nat{limbs: m})
 }
 
 func makeBenchmarkValue() *nat {
@@ -256,7 +258,7 @@ func BenchmarkMontgomeryMul(b *testing.B) {
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		out.montgomeryMul(x, y, m, 0xABCD)
+		out.montgomeryMul(x, y, m)
 	}
 }
 
@@ -287,6 +289,6 @@ func BenchmarkExp(b *testing.B) {
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		out.exp(x, e, m, m.limbs[0])
+		out.exp(x, e, m)
 	}
 }
