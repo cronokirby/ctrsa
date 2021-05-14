@@ -164,7 +164,7 @@ func modulusFromNat(nat *nat) *modulus {
 	for size = uint(len(m.nat.limbs)); size > 0 && m.nat.limbs[size-1] == 0; size-- {
 	}
 	m.nat.limbs = m.nat.limbs[:size]
-	m.leading = uint(bits.LeadingZeros(m.nat.limbs[size-1]))
+	m.leading = uint(bits.LeadingZeros(m.nat.limbs[size-1]) - 1)
 	m.m0inv = minusInverseModW(m.nat.limbs[0])
 	return &m
 }
