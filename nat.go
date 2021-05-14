@@ -63,6 +63,15 @@ func ctEq(x, y uint) choice {
 	return 1 ^ choice((q|-q)>>(bits.UintSize-1))
 }
 
+// ctGeq calculates x >= y
+//
+// This works with any two uint values, not just those fitting over _W bits
+func ctGeq(x, y uint) choice {
+	// If subtracting y from x overflows, then x >= y cannot be true
+	_, carry := bits.Sub(x, y, 0)
+	return 1 ^ choice(carry)
+}
+
 // cmpEq compares two natural numbers for equality
 //
 // Both operands should have the same length.
