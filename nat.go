@@ -169,6 +169,19 @@ func modulusFromNat(nat *nat) *modulus {
 	return &m
 }
 
+func (x *nat) mulSub(q uint, m *nat) (cc uint) {
+	for i := 0; i < len(x.limbs) && i < len(m.limbs); i++ {
+		hi, lo := bits.Mul(q, m.limbs[i])
+		lo, cc = bits.Add(lo, cc, 0)
+		hi += cc
+		cc = (hi << 1) | (lo >> _W)
+		res := x.limbs[i] - (lo & _MASK)
+		cc += res >> _W
+		x.limbs[i] = res & _MASK
+	}
+	return
+}
+
 // shiftIn calculates x = x << _W + y mod m
 //
 // This assumes that x is already reduced mod m.
@@ -184,6 +197,43 @@ func (x *nat) shiftIn(y uint, m *modulus) {
 		x.limbs[0] = r
 		return
 	}
+
+	// The idea is as follows:
+	//
+	// We want to shift y into x, and then divide by m. Instead of dividing by
+	// m, we can get a good estimate, using the top two 2 * _W bits of x, and the
+	// top _W bits of m. These are stored in a1:a0, and b0 respectively.
+
+	// We need to keep around the top limb of x, pre-shifts
+	hi := x.limbs[size-1]
+	a1 := ((hi << m.leading) | (x.limbs[size-2] >> (_W - m.leading))) & _MASK
+	// The actual shift can be performed by moving the limbs of x up, then inserting y
+	for i := size - 1; i > 0; i-- {
+		x.limbs[i] = x.limbs[i-1]
+	}
+	x.limbs[0] = y
+	a0 := ((x.limbs[size-1] << m.leading) | (x.limbs[size-2] >> (_W - m.leading))) & _MASK
+	b0 := ((m.nat.limbs[size-1] << m.leading) | (m.nat.limbs[size-2] >> (_W - m.leading))) & _MASK
+
+	// We want to use a1:a0 / b0 - 1 as our estimate. If rawQ is 0, we should
+	// use 0 as our estimate. Another edge case when an overflow happens in the quotient.
+	// It can be shown that this happens when a1 == b0. In this case, we want
+	// to use the maximum value for q
+	rawQ, _ := div(a1>>1, (a1<<_W)|a0, b0)
+	q := ctIfElse(ctEq(a1, b0), _MASK, ctIfElse(ctEq(rawQ, 0), 0, rawQ-1))
+	// This estimate is off by +- 1, so we subtract q * m, and then either add
+	// or subtract m, based on the result.
+	cc := x.mulSub(q, m.nat)
+	// If the carry from subtraction is greater than the limb of x we've shifted out,
+	// then we've underflowed, and need to add in m
+	under := 1 ^ ctGeq(hi, cc)
+	// For us to be too large, we first need to not be too low, as per the previous flag.
+	// Then, if the lower limbs of x are still larger, or the top limb of x is equal to the carry,
+	// we can conclude that we're too large, and need to subtract m
+	stillBigger := x.cmpGeq(m.nat)
+	over := (1 ^ under) & (stillBigger | (1 ^ ctEq(cc, hi)))
+	x.add(under, m.nat)
+	x.sub(over, m.nat)
 }
 
 // add comptues x += y, if on == 1, and otherwise does nothing

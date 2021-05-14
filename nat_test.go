@@ -199,6 +199,18 @@ func TestShiftInExamples(t *testing.T) {
 	if x.cmpEq(expected) != 1 {
 		t.Errorf("%+v != %+v", x, expected)
 	}
+	m = modulusFromNat(&nat{[]uint{13, 13}})
+	x = &nat{[]uint{0, 0}}
+	x.shiftIn(0x7FFF_FFFF_FFFF_FFFF, m)
+	expected = &nat{[]uint{0x7FFF_FFFF_FFFF_FFFF, 0}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+	x.shiftIn(0, m)
+	expected = &nat{[]uint{0x8, 0x6}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
 }
 
 func makeBenchmarkModulus() *modulus {
