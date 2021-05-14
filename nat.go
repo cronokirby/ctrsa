@@ -53,12 +53,14 @@ type choice uint
 
 // ctEq compares two uint values for equality
 //
-// This function requires that both x and y fit over _W bits.
+// This works with any two uint values, not just those that fit over _W bits
 func ctEq(x, y uint) choice {
-	// If x == y, then x ^ y should be all zero bits. We then underflow
-	// when subtracting 1, so the top bit is set. Otherwise, the top
-	// will remain unset, giving us 0.
-	return choice(((x ^ y) - 1) >> _W)
+	// If x == y, then x ^ y should be all zero bits.
+	q := x ^ y
+	// For any q != 0, either the MSB of q, or the MSB of -q is 1.
+	// We can thus or those together, and check the top bit. When q is zero,
+	// that means that x and y are equal, so we negate that top bit.
+	return 1 ^ choice((q|-q)>>(bits.UintSize-1))
 }
 
 // cmpEq compares two natural numbers for equality
