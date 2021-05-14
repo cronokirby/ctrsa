@@ -169,6 +169,23 @@ func modulusFromNat(nat *nat) *modulus {
 	return &m
 }
 
+// shiftIn calculates x = x << _W + y mod m
+//
+// This assumes that x is already reduced mod m.
+func (x *nat) shiftIn(y uint, m *modulus) {
+	size := len(m.nat.limbs)
+	if size == 0 {
+		return
+	}
+	if size == 1 {
+		// In this case, x:y % m is exactly what we need to calculate
+		// div expects fully saturated limbs, so we have a bit of manipulation to do here
+		_, r := div(x.limbs[0]>>1, (x.limbs[0]<<_W)|y, m.nat.limbs[0])
+		x.limbs[0] = r
+		return
+	}
+}
+
 // add comptues x += y, if on == 1, and otherwise does nothing
 //
 // The length of both operands must be the same.

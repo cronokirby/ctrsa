@@ -186,6 +186,21 @@ func TestDiv(t *testing.T) {
 	}
 }
 
+func TestShiftInExamples(t *testing.T) {
+	m := modulusFromNat(&nat{[]uint{13}})
+	x := &nat{[]uint{0}}
+	x.shiftIn(0x7FFF_FFFF_FFFF_FFFF, m)
+	expected := &nat{[]uint{7}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+	x.shiftIn(0x7FFF_FFFF_FFFF_FFFF, m)
+	expected = &nat{[]uint{11}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+}
+
 func makeBenchmarkModulus() *modulus {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {
