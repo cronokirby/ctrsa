@@ -311,8 +311,8 @@ func (x *nat) montgomeryRepresentation(m *modulus) {
 	// This is a pretty slow way of calculating a representation.
 	// The advantage of doing it with this method is that it doesn't require adding
 	// any extra code. It's also not that bad compared to the cost of exponentiation
-	for i := 0; i < len(m.nat.limbs)*_W; i++ {
-		x.modAdd(x, m)
+	for i := 0; i < len(m.nat.limbs); i++ {
+		x.shiftIn(0, m)
 	}
 }
 
