@@ -161,6 +161,15 @@ func TestFillBytes(t *testing.T) {
 	}
 }
 
+func TestFromBytes(t *testing.T) {
+	x := &nat{[]uint{0x7F22_3344_5566_7788, 1}}
+	xBytes := []byte{0xFF, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}
+	actual := natFromBytes(xBytes)
+	if actual.cmpEq(x) != 1 {
+		t.Errorf("%+v != %+v", actual, x)
+	}
+}
+
 func makeBenchmarkModulus() *nat {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {
