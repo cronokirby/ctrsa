@@ -303,6 +303,38 @@ func (x *nat) modAdd(y *nat, m *modulus) {
 	x.sub(needSubtraction, m.nat)
 }
 
+func (x *nat) simpleMul(y *nat, m *modulus) {
+	xMonty := x.clone()
+	xMonty.montgomeryRepresentation(m)
+	x.montgomeryMul(xMonty, y, m)
+}
+
+func (x *nat) modMul(y *nat, m *modulus) {
+	shifted := x.clone()
+	for i := 0; i < len(x.limbs); i++ {
+		x.limbs[i] = 0
+	}
+	for _, yLimb := range y.limbs {
+		var cc uint
+		hi, lo := bits.Mul(yLimb, shifted.limbs[0])
+		lo, cc = bits.Add(lo, x.limbs[0], 0)
+		hi += cc
+		cc = (hi << 1) | (lo >> _W)
+		firstLo := lo & _MASK
+		for i := 1; i < len(x.limbs) && i < len(y.limbs); i++ {
+			hi, lo = bits.Mul(y.limbs[i], shifted.limbs[i])
+			lo, cc = bits.Add(lo, cc, 0)
+			lo, cc = bits.Add(lo, x.limbs[i], cc)
+			hi += cc
+			cc = (hi << 1) | (lo >> _W)
+			x.limbs[i-1] = lo & _MASK
+		}
+		x.limbs[len(x.limbs)-1] = cc
+		x.shiftIn(firstLo, m)
+		shifted.shiftIn(0, m)
+	}
+}
+
 // montgomeryRepresentation calculates x = xR % m, with R := _W^n, and n = len(m)
 //
 // Montgomery multiplication replaces standard modular multiplication for numbers

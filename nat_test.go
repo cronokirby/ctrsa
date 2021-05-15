@@ -288,6 +288,31 @@ func BenchmarkMontgomeryMul(b *testing.B) {
 		out.montgomeryMul(x, y, m)
 	}
 }
+func BenchmarkModMulMonty(b *testing.B) {
+	b.StopTimer()
+
+	x := makeBenchmarkValue()
+	y := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		x.simpleMul(y, m)
+	}
+}
+
+func BenchmarkModMul(b *testing.B) {
+	b.StopTimer()
+
+	x := makeBenchmarkValue()
+	y := makeBenchmarkValue()
+	m := makeBenchmarkModulus()
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		x.modMul(y, m)
+	}
+}
 
 func BenchmarkExpBig(b *testing.B) {
 	b.StopTimer()
