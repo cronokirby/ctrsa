@@ -388,6 +388,7 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *modulus) {
 }
 
 func (out *nat) exp(x *nat, e []byte, m *modulus) {
+	out.expand(len(m.nat.limbs))
 	xSquared := x.clone()
 	xSquared.montgomeryRepresentation(m)
 	for i := 0; i < len(out.limbs); i++ {

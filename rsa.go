@@ -514,7 +514,7 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		return nil, ErrDecryption
 	}
 
-	m = new(nat).expand(size)
+	m = new(nat)
 	m.exp(c, priv.D.Bytes(), nModulus)
 
 	return
