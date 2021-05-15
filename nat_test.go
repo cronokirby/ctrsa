@@ -214,11 +214,11 @@ func TestShiftInExamples(t *testing.T) {
 }
 
 func TestMod(t *testing.T) {
-	m := modulusFromNat(&nat{[]uint{13}})
+	m := modulusFromNat(&nat{[]uint{13, 13}})
 	x := &nat{[]uint{1, 1, 1}}
 	out := new(nat)
 	out.mod(x, m)
-	expected := &nat{[]uint{8}}
+	expected := &nat{[]uint{9, 8}}
 	if out.cmpEq(expected) != 1 {
 		t.Errorf("%+v != %+v", out, expected)
 	}
