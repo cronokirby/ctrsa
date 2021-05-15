@@ -391,12 +391,13 @@ func (out *nat) exp(x *nat, e []byte, m *modulus) {
 	size := len(m.nat.limbs)
 	out.expand(size)
 
-	x1 := x.clone()
-	x1.montgomeryRepresentation(m)
-	x2 := &nat{make([]uint, size)}
-	x2.montgomeryMul(x1, x1, m)
-	x3 := &nat{make([]uint, size)}
-	x3.montgomeryMul(x1, x2, m)
+	xs := make([]*nat, 15)
+	xs[0] = x.clone()
+	xs[0].montgomeryRepresentation(m)
+	for i := 1; i < len(xs); i++ {
+		xs[i] = &nat{make([]uint, size)}
+		xs[i].montgomeryMul(xs[i-1], xs[0], m)
+	}
 
 	selectedX := &nat{make([]uint, size)}
 	for i := 0; i < len(out.limbs); i++ {
@@ -406,15 +407,16 @@ func (out *nat) exp(x *nat, e []byte, m *modulus) {
 	out.montgomeryRepresentation(m)
 	scratch := &nat{make([]uint, size)}
 	for _, b := range e {
-		for j := 6; j >= 0; j -= 2 {
+		for j := 4; j >= 0; j -= 4 {
+			scratch.montgomeryMul(out, out, m)
+			out.montgomeryMul(scratch, scratch, m)
 			scratch.montgomeryMul(out, out, m)
 			out.montgomeryMul(scratch, scratch, m)
 
-			window := uint((b >> j) & 0b11)
-			selectedX.assign(ctEq(window, 1), x1)
-			selectedX.assign(ctEq(window, 2), x2)
-			selectedX.assign(ctEq(window, 3), x3)
-
+			window := uint((b >> j) & 0b1111)
+			for i := 0; i < len(xs); i++ {
+				selectedX.assign(ctEq(window, uint(i+1)), xs[i])
+			}
 			scratch.montgomeryMul(out, selectedX, m)
 			out.assign(1^ctEq(window, 0), scratch)
 		}
