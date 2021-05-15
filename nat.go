@@ -315,9 +315,6 @@ func (x *nat) modMul(y *nat, m *modulus) {
 // Montgomery multiplication replaces standard modular multiplication for numbers
 // in this representation. This speeds up the multiplication operation in this case.
 func (x *nat) montgomeryRepresentation(m *modulus) {
-	// This is a pretty slow way of calculating a representation.
-	// The advantage of doing it with this method is that it doesn't require adding
-	// any extra code. It's also not that bad compared to the cost of exponentiation
 	for i := 0; i < len(m.nat.limbs); i++ {
 		x.shiftIn(0, m)
 	}
