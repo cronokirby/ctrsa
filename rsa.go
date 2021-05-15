@@ -514,8 +514,42 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		return nil, ErrDecryption
 	}
 
-	m = new(nat)
-	m.exp(c, priv.D.Bytes(), nModulus)
+	if priv.Precomputed.Dp == nil {
+		m = new(nat)
+		m.exp(c, priv.D.Bytes(), nModulus)
+	} else {
+		nSize := len(nModulus.nat.limbs)
+		primeMod0 := modulusFromNat(natFromBig(priv.Primes[0]))
+		primeMod1 := modulusFromNat(natFromBig(priv.Primes[1]))
+		cMod := new(nat)
+		cMod.mod(c, primeMod0)
+		m = new(nat)
+		m.exp(cMod, priv.Precomputed.Dp.Bytes(), primeMod0)
+		cMod.mod(c, primeMod1)
+		m2 := new(nat)
+		m2.exp(cMod, priv.Precomputed.Dq.Bytes(), primeMod1)
+		m.modSub(m2, primeMod0)
+		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
+		m.expand(nSize)
+		m.modMul(primeMod0.nat, nModulus)
+		m.modAdd(m2.expand(nSize), nModulus)
+
+		mMod := new(nat)
+		for i, values := range priv.Precomputed.CRTValues {
+			prime := priv.Primes[2+i]
+			primeMod := modulusFromNat(natFromBig(prime))
+			cMod.mod(c, primeMod)
+			m2.exp(cMod, values.Exp.Bytes(), primeMod)
+			mMod.mod(m, primeMod)
+			m2.modSub(m, primeMod)
+			m2.modMul(natFromBig(values.Coeff), primeMod)
+			m2.expand(nSize)
+			rNat := natFromBig(values.R)
+			rNat.expand(nSize)
+			m2.modMul(rNat, nModulus)
+			m.modAdd(m2, nModulus)
+		}
+	}
 
 	return
 }
