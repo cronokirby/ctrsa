@@ -236,6 +236,32 @@ func (x *nat) shiftIn(y uint, m *modulus) {
 	x.sub(over, m.nat)
 }
 
+// mod calculates out = x mod m
+//
+// This works regardless how large the value of x is
+func (out *nat) mod(x *nat, m *modulus) {
+	out.expand(len(m.nat.limbs))
+	for i := 0; i < len(out.limbs); i++ {
+		out.limbs[i] = 0
+	}
+	i := len(x.limbs) - 1
+	// We can inject at least N - 1 limbs while staying under m
+	// Thus, we start injecting from index N - 2
+	start := len(m.nat.limbs) - 2
+	// That is, if there are at least that many limbs to choose from
+	if i < start {
+		start = i
+	}
+	for j := start; j >= 0; j-- {
+		out.limbs[j] = x.limbs[i]
+		i--
+	}
+	// We shift in the remaining limbs, making sure to reduce modulo M each time
+	for ; i >= 0; i-- {
+		out.shiftIn(x.limbs[i], m)
+	}
+}
+
 // add comptues x += y, if on == 1, and otherwise does nothing
 //
 // The length of both operands must be the same.

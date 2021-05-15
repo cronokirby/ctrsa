@@ -213,6 +213,17 @@ func TestShiftInExamples(t *testing.T) {
 	}
 }
 
+func TestMod(t *testing.T) {
+	m := modulusFromNat(&nat{[]uint{13}})
+	x := &nat{[]uint{1, 1, 1}}
+	out := new(nat)
+	out.mod(x, m)
+	expected := &nat{[]uint{8}}
+	if out.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", out, expected)
+	}
+}
+
 func makeBenchmarkModulus() *modulus {
 	m := make([]uint, 32)
 	for i := 0; i < 32; i++ {
