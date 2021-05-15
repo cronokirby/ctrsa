@@ -389,24 +389,28 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *modulus) {
 
 func (out *nat) exp(x *nat, e []byte, m *modulus) {
 	out.expand(len(m.nat.limbs))
-	xSquared := x.clone()
-	xSquared.montgomeryRepresentation(m)
+	xMonty := x.clone()
+	xMonty.montgomeryRepresentation(m)
 	for i := 0; i < len(out.limbs); i++ {
 		out.limbs[i] = 0
 	}
 	out.limbs[0] = 1
+	out.montgomeryRepresentation(m)
 	scratch := &nat{make([]uint, len(m.nat.limbs))}
-	for i := len(e) - 1; i >= 0; i-- {
-		b := e[i]
-		for j := 0; j < 8; j++ {
-			selectMultiply := choice(b & 1)
-			scratch.montgomeryMul(out, xSquared, m)
-			out.assign(selectMultiply, scratch)
-			scratch.montgomeryMul(xSquared, xSquared, m)
-			scratch, xSquared = xSquared, scratch
-			b >>= 1
+	for _, b := range e {
+		for j := 7; j >= 0; j-- {
+			scratch.montgomeryMul(out, out, m)
+			out.montgomeryMul(scratch, xMonty, m)
+			selectMultiply := choice((b >> j) & 1)
+			out.assign(1^selectMultiply, scratch)
 		}
 	}
+	for i := 0; i < len(scratch.limbs); i++ {
+		scratch.limbs[i] = 0
+	}
+	scratch.limbs[0] = 1
+	outC := out.clone()
+	out.montgomeryMul(outC, scratch, m)
 }
 
 func (x *nat) toBig() *big.Int {
