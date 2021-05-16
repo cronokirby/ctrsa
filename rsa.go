@@ -536,13 +536,12 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 
 		mMod := new(nat)
 		for i, values := range priv.Precomputed.CRTValues {
-			prime := priv.Primes[2+i]
-			primeMod := modulusFromNat(natFromBig(prime))
-			cMod.mod(c, primeMod)
-			m2.exp(cMod, values.Exp.Bytes(), primeMod)
-			mMod.mod(m, primeMod)
-			m2.modSub(m, primeMod)
-			m2.modMul(natFromBig(values.Coeff), primeMod)
+			prime := modulusFromNat(natFromBig(priv.Primes[2+i]))
+			cMod.mod(c, prime)
+			m2.exp(cMod, values.Exp.Bytes(), prime)
+			mMod.mod(m, prime)
+			m2.modSub(m, prime)
+			m2.modMul(natFromBig(values.Coeff), prime)
 			m2.expandFor(nModulus)
 			rNat := natFromBig(values.R)
 			rNat.expandFor(nModulus)
