@@ -407,6 +407,15 @@ func (out *nat) mod(x *nat, m *modulus) {
 	}
 }
 
+// expandFor makes sure that out has the right size to work with operations modulo m
+//
+// This assumes that out is already reduced modulo m, but may not be properly sized. Since
+// modular operations assume that operands are exactly the right size, this allows us
+// to expand a natural number to meet this expectation.
+func (out *nat) expandFor(m *modulus) {
+	out.expand(len(m.nat.limbs))
+}
+
 // modSub computes x = (x - y) % m
 //
 // The length of both operands must be the same as the modulus.

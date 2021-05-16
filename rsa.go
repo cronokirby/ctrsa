@@ -518,7 +518,6 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		m = new(nat)
 		m.exp(c, priv.D.Bytes(), nModulus)
 	} else {
-		nSize := len(nModulus.nat.limbs)
 		primeMod0 := modulusFromNat(natFromBig(priv.Primes[0]))
 		primeMod1 := modulusFromNat(natFromBig(priv.Primes[1]))
 		cMod := new(nat)
@@ -530,9 +529,10 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		m2.exp(cMod, priv.Precomputed.Dq.Bytes(), primeMod1)
 		m.modSub(m2, primeMod0)
 		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
-		m.expand(nSize)
+		m.expandFor(nModulus)
 		m.modMul(primeMod0.nat, nModulus)
-		m.modAdd(m2.expand(nSize), nModulus)
+		m2.expandFor(nModulus)
+		m.modAdd(m2, nModulus)
 
 		mMod := new(nat)
 		for i, values := range priv.Precomputed.CRTValues {
@@ -543,9 +543,9 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 			mMod.mod(m, primeMod)
 			m2.modSub(m, primeMod)
 			m2.modMul(natFromBig(values.Coeff), primeMod)
-			m2.expand(nSize)
+			m2.expandFor(nModulus)
 			rNat := natFromBig(values.R)
-			rNat.expand(nSize)
+			rNat.expandFor(nModulus)
 			m2.modMul(rNat, nModulus)
 			m.modAdd(m2, nModulus)
 		}
