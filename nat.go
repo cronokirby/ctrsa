@@ -241,10 +241,11 @@ func (x *nat) cmpGeq(y *nat) choice {
 	return 1 ^ choice(c)
 }
 
-func (x *nat) assign(on choice, y *nat) {
+func (x *nat) assign(on choice, y *nat) *nat {
 	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
 		x.limbs[i] = ctIfElse(on, y.limbs[i], x.limbs[i])
 	}
+	return x
 }
 
 // add comptues x += y, if on == 1, and otherwise does nothing
@@ -330,17 +331,17 @@ func modulusFromNat(nat *nat) *modulus {
 // shiftIn calculates x = x << _W + y mod m
 //
 // This assumes that x is already reduced mod m.
-func (x *nat) shiftIn(y uint, m *modulus) {
+func (x *nat) shiftIn(y uint, m *modulus) *nat {
 	size := len(m.nat.limbs)
 	if size == 0 {
-		return
+		return x
 	}
 	if size == 1 {
 		// In this case, x:y % m is exactly what we need to calculate
 		// div expects fully saturated limbs, so we have a bit of manipulation to do here
 		_, r := div(x.limbs[0]>>1, (x.limbs[0]<<_W)|y, m.nat.limbs[0])
 		x.limbs[0] = r
-		return
+		return x
 	}
 
 	// The idea is as follows:
@@ -379,12 +380,13 @@ func (x *nat) shiftIn(y uint, m *modulus) {
 	over := (1 ^ under) & (stillBigger | (1 ^ ctEq(cc, hi)))
 	x.add(under, m.nat)
 	x.sub(over, m.nat)
+	return x
 }
 
 // mod calculates out = x mod m
 //
 // This works regardless how large the value of x is
-func (out *nat) mod(x *nat, m *modulus) {
+func (out *nat) mod(x *nat, m *modulus) *nat {
 	out.expand(len(m.nat.limbs))
 	for i := 0; i < len(out.limbs); i++ {
 		out.limbs[i] = 0
@@ -405,6 +407,7 @@ func (out *nat) mod(x *nat, m *modulus) {
 	for ; i >= 0; i-- {
 		out.shiftIn(x.limbs[i], m)
 	}
+	return out
 }
 
 // expandFor makes sure that out has the right size to work with operations modulo m
@@ -412,8 +415,8 @@ func (out *nat) mod(x *nat, m *modulus) {
 // This assumes that out is already reduced modulo m, but may not be properly sized. Since
 // modular operations assume that operands are exactly the right size, this allows us
 // to expand a natural number to meet this expectation.
-func (out *nat) expandFor(m *modulus) {
-	out.expand(len(m.nat.limbs))
+func (out *nat) expandFor(m *modulus) *nat {
+	return out.expand(len(m.nat.limbs))
 }
 
 // modSub computes x = (x - y) % m
@@ -421,9 +424,10 @@ func (out *nat) expandFor(m *modulus) {
 // The length of both operands must be the same as the modulus.
 //
 // Both operands must already be reduced modulo m.
-func (x *nat) modSub(y *nat, m *modulus) {
+func (x *nat) modSub(y *nat, m *modulus) *nat {
 	underflow := x.sub(1, y)
 	x.add(choice(underflow), m.nat)
+	return x
 }
 
 // modAdd computes x = (x + y) % m
@@ -431,7 +435,7 @@ func (x *nat) modSub(y *nat, m *modulus) {
 // The length of both operands must be the same as the modulus.
 //
 // Both operands must already be reduced modulo m.
-func (x *nat) modAdd(y *nat, m *modulus) {
+func (x *nat) modAdd(y *nat, m *modulus) *nat {
 	overflow := x.add(1, y)
 	// If x < m, then subtraction will underflow
 	underflow := 1 ^ x.cmpGeq(m.nat)
@@ -453,16 +457,18 @@ func (x *nat) modAdd(y *nat, m *modulus) {
 	// once is necessary, which cannot happen.
 	needSubtraction := ctEq(overflow, uint(underflow))
 	x.sub(needSubtraction, m.nat)
+	return x
 }
 
 // montgomeryRepresentation calculates x = xR % m, with R := _W^n, and n = len(m)
 //
 // Montgomery multiplication replaces standard modular multiplication for numbers
 // in this representation. This speeds up the multiplication operation in this case.
-func (x *nat) montgomeryRepresentation(m *modulus) {
+func (x *nat) montgomeryRepresentation(m *modulus) *nat {
 	for i := 0; i < len(m.nat.limbs); i++ {
 		x.shiftIn(0, m)
 	}
+	return x
 }
 
 // montgomeryMul calculates out = xy / R % m, with R := _W^n, and n = len(m)
@@ -470,7 +476,7 @@ func (x *nat) montgomeryRepresentation(m *modulus) {
 // This is faster than your standard modular multiplication.
 //
 // All inputs should be the same length, and not alias eachother.
-func (out *nat) montgomeryMul(x *nat, y *nat, m *modulus) {
+func (out *nat) montgomeryMul(x *nat, y *nat, m *modulus) *nat {
 	for i := 0; i < len(out.limbs); i++ {
 		out.limbs[i] = 0
 	}
@@ -504,16 +510,18 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *modulus) {
 	// See modAdd
 	needSubtraction := ctEq(overflow, uint(underflow))
 	out.sub(needSubtraction, m.nat)
+	return out
 }
 
 // modMul calculates x *= y mod m
-func (x *nat) modMul(y *nat, m *modulus) {
+func (x *nat) modMul(y *nat, m *modulus) *nat {
 	xMonty := x.clone()
 	xMonty.montgomeryRepresentation(m)
 	x.montgomeryMul(xMonty, y, m)
+	return x
 }
 
-func (out *nat) exp(x *nat, e []byte, m *modulus) {
+func (out *nat) exp(x *nat, e []byte, m *modulus) *nat {
 	size := len(m.nat.limbs)
 	out.expand(size)
 
@@ -553,4 +561,5 @@ func (out *nat) exp(x *nat, e []byte, m *modulus) {
 	scratch.limbs[0] = 1
 	outC := out.clone()
 	out.montgomeryMul(outC, scratch, m)
+	return out
 }

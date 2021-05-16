@@ -27,7 +27,6 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"errors"
-	"fmt"
 	"hash"
 	"io"
 	"math"
@@ -388,8 +387,7 @@ var ErrMessageTooLong = errors.New("crypto/rsa: message too long for RSA public 
 
 func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
 	nModulus := modulusFromNat(natFromBig(pub.N))
-	mNat := m.clone()
-	mNat.expandFor(nModulus)
+	m = m.clone().expandFor(nModulus)
 
 	// This calculation leaks information about e, but it's public, so this is ok
 	e64 := uint64(pub.E)
@@ -400,9 +398,7 @@ func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
 		e64 >>= 8
 	}
 
-	cNat := new(nat)
-	cNat.exp(mNat, e, nModulus)
-	return cNat
+	return new(nat).exp(m, e, nModulus)
 }
 
 // EncryptOAEP encrypts the given message with RSA-OAEP.
@@ -506,7 +502,6 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 	size := len(nModulus.nat.limbs)
 	c = c.clone().expand(size)
 	if c.cmpGeq(nModulus.nat) == 1 {
-		fmt.Println("c large", c, "N", priv.N)
 		err = ErrDecryption
 		return
 	}
@@ -515,24 +510,20 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 	}
 
 	if priv.Precomputed.Dp == nil {
-		m = new(nat)
-		m.exp(c, priv.D.Bytes(), nModulus)
+		m = new(nat).exp(c, priv.D.Bytes(), nModulus)
 	} else {
 		primeMod0 := modulusFromNat(natFromBig(priv.Primes[0]))
 		primeMod1 := modulusFromNat(natFromBig(priv.Primes[1]))
-		cMod := new(nat)
-		cMod.mod(c, primeMod0)
-		m = new(nat)
-		m.exp(cMod, priv.Precomputed.Dp.Bytes(), primeMod0)
+		cMod := new(nat).mod(c, primeMod0)
+		m = new(nat).exp(cMod, priv.Precomputed.Dp.Bytes(), primeMod0)
 		cMod.mod(c, primeMod1)
-		m2 := new(nat)
-		m2.exp(cMod, priv.Precomputed.Dq.Bytes(), primeMod1)
+		m2 := new(nat).exp(cMod, priv.Precomputed.Dq.Bytes(), primeMod1)
 		m.modSub(m2, primeMod0)
 		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
+
 		m.expandFor(nModulus)
 		m.modMul(primeMod0.nat, nModulus)
-		m2.expandFor(nModulus)
-		m.modAdd(m2, nModulus)
+		m.modAdd(m2.expandFor(nModulus), nModulus)
 
 		mMod := new(nat)
 		for i, values := range priv.Precomputed.CRTValues {
@@ -542,9 +533,8 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 			mMod.mod(m, prime)
 			m2.modSub(m, prime)
 			m2.modMul(natFromBig(values.Coeff), prime)
+			rNat := natFromBig(values.R).expandFor(nModulus)
 			m2.expandFor(nModulus)
-			rNat := natFromBig(values.R)
-			rNat.expandFor(nModulus)
 			m2.modMul(rNat, nModulus)
 			m.modAdd(m2, nModulus)
 		}
