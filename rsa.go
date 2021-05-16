@@ -388,8 +388,8 @@ var ErrMessageTooLong = errors.New("crypto/rsa: message too long for RSA public 
 
 func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
 	nModulus := modulusFromNat(natFromBig(pub.N))
-	size := len(nModulus.nat.limbs)
-	mNat := m.clone().expand(size)
+	mNat := m.clone()
+	mNat.expandFor(nModulus)
 
 	// This calculation leaks information about e, but it's public, so this is ok
 	e64 := uint64(pub.E)
@@ -400,7 +400,7 @@ func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
 		e64 >>= 8
 	}
 
-	cNat := new(nat).expand(size)
+	cNat := new(nat)
 	cNat.exp(mNat, e, nModulus)
 	return cNat
 }
