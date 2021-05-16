@@ -17,6 +17,20 @@ func (*nat) Generate(r *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(&nat{limbs})
 }
 
+func testConversion(a *nat) bool {
+	aBig := a.toBig()
+	aFromBig := natFromBig(aBig)
+	aBigAgain := aFromBig.toBig()
+	return aBig.Cmp(aBigAgain) == 0
+}
+
+func TestConversion(t *testing.T) {
+	err := quick.Check(testConversion, &quick.Config{})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func testModAddCommutative(a *nat, b *nat) bool {
 	mLimbs := make([]uint, len(a.limbs))
 	for i := 0; i < len(mLimbs); i++ {
@@ -73,63 +87,6 @@ func TestMontgomeryRoundtrip(t *testing.T) {
 	err := quick.Check(testMontgomeryRoundtrip, &quick.Config{})
 	if err != nil {
 		t.Error(err)
-	}
-}
-
-func testConversion(a *nat) bool {
-	aBig := a.toBig()
-	aFromBig := natFromBig(aBig)
-	aBigAgain := aFromBig.toBig()
-	return aBig.Cmp(aBigAgain) == 0
-}
-
-func TestConversion(t *testing.T) {
-	err := quick.Check(testConversion, &quick.Config{})
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestModSubExamples(t *testing.T) {
-	m := modulusFromNat(&nat{[]uint{13}})
-	x := &nat{[]uint{6}}
-	y := &nat{[]uint{7}}
-	x.modSub(y, m)
-	expected := &nat{[]uint{12}}
-	if x.cmpEq(expected) != 1 {
-		t.Errorf("%+v != %+v", x, expected)
-	}
-	x.modSub(y, m)
-	expected = &nat{[]uint{5}}
-	if x.cmpEq(expected) != 1 {
-		t.Errorf("%+v != %+v", x, expected)
-	}
-}
-
-func TestModAddExamples(t *testing.T) {
-	m := modulusFromNat(&nat{[]uint{13}})
-	x := &nat{[]uint{6}}
-	y := &nat{[]uint{7}}
-	x.modAdd(y, m)
-	expected := &nat{[]uint{0}}
-	if x.cmpEq(expected) != 1 {
-		t.Errorf("%+v != %+v", x, expected)
-	}
-	x.modAdd(y, m)
-	expected = &nat{[]uint{7}}
-	if x.cmpEq(expected) != 1 {
-		t.Errorf("%+v != %+v", x, expected)
-	}
-}
-
-func TestExpExamples(t *testing.T) {
-	m := modulusFromNat(&nat{[]uint{13}})
-	x := &nat{[]uint{3}}
-	out := &nat{[]uint{0}}
-	out.exp(x, []byte{12}, m)
-	expected := &nat{[]uint{1}}
-	if out.cmpEq(expected) != 1 {
-		t.Errorf("%+v != %+v", out, expected)
 	}
 }
 
@@ -219,6 +176,49 @@ func TestMod(t *testing.T) {
 	out := new(nat)
 	out.mod(x, m)
 	expected := &nat{[]uint{9, 8}}
+	if out.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", out, expected)
+	}
+}
+
+func TestModSubExamples(t *testing.T) {
+	m := modulusFromNat(&nat{[]uint{13}})
+	x := &nat{[]uint{6}}
+	y := &nat{[]uint{7}}
+	x.modSub(y, m)
+	expected := &nat{[]uint{12}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+	x.modSub(y, m)
+	expected = &nat{[]uint{5}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+}
+
+func TestModAddExamples(t *testing.T) {
+	m := modulusFromNat(&nat{[]uint{13}})
+	x := &nat{[]uint{6}}
+	y := &nat{[]uint{7}}
+	x.modAdd(y, m)
+	expected := &nat{[]uint{0}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+	x.modAdd(y, m)
+	expected = &nat{[]uint{7}}
+	if x.cmpEq(expected) != 1 {
+		t.Errorf("%+v != %+v", x, expected)
+	}
+}
+
+func TestExpExamples(t *testing.T) {
+	m := modulusFromNat(&nat{[]uint{13}})
+	x := &nat{[]uint{3}}
+	out := &nat{[]uint{0}}
+	out.exp(x, []byte{12}, m)
+	expected := &nat{[]uint{1}}
 	if out.cmpEq(expected) != 1 {
 		t.Errorf("%+v != %+v", out, expected)
 	}
