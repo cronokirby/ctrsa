@@ -66,7 +66,10 @@ func ctGeq(x, y uint) choice {
 //
 // All of the inputs are over the full size of uint.
 func div(hi, lo, d uint) (quo uint, rem uint) {
-	hi = ctIfElse(ctEq(hi, d), 0, hi)
+	// The rough idea is to iterate from high to low bits b,
+	// and check if we can remove d << b from hi:lo.
+	// If so, mark that bit of the quotient as set. Whatever value we're left
+	// with after all of these subtractions is then our remainder.
 	for i := bits.UintSize - 1; i > 0; i-- {
 		j := bits.UintSize - i
 		w := (hi << j) | (lo >> i)
@@ -80,7 +83,6 @@ func div(hi, lo, d uint) (quo uint, rem uint) {
 	}
 	// This section could be merged into the loop, but it would cost a few more operations
 	sel := ctGeq(lo, d) | choice(hi)
-	rem = lo
 	rem = ctIfElse(sel, lo-d, lo)
 	quo |= uint(sel)
 	return
