@@ -398,7 +398,7 @@ func encrypt(c *nat, pub *PublicKey, m *nat) *nat {
 		e64 >>= 8
 	}
 
-	return new(nat).exp(m, e, nModulus)
+	return c.exp(m, e, nModulus)
 }
 
 // EncryptOAEP encrypts the given message with RSA-OAEP.
