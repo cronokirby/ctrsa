@@ -67,8 +67,7 @@ func ctGeq(x, y uint) choice {
 // All of the inputs are over the full size of uint.
 func div(hi, lo, d uint) (quo uint, rem uint) {
 	hi = ctIfElse(ctEq(hi, d), 0, hi)
-	for i := bits.UintSize - 1; i >= 0; i-- {
-		quo <<= 1
+	for i := bits.UintSize - 1; i > 0; i-- {
 		j := bits.UintSize - i
 		w := (hi << j) | (lo >> i)
 		sel := ctGeq(w, d) | choice(hi>>i)
@@ -77,8 +76,13 @@ func div(hi, lo, d uint) (quo uint, rem uint) {
 		hi = ctIfElse(sel, hi2, hi)
 		lo = ctIfElse(sel, lo2, lo)
 		quo |= uint(sel)
+		quo <<= 1
 	}
+	// This section could be merged into the loop, but it would cost a few more operations
+	sel := ctGeq(lo, d) | choice(hi)
 	rem = lo
+	rem = ctIfElse(sel, lo-d, lo)
+	quo |= uint(sel)
 	return
 }
 
