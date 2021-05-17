@@ -73,6 +73,8 @@ func div(hi, lo, d uint) (quo uint, rem uint) {
 	for i := bits.UintSize - 1; i > 0; i-- {
 		j := bits.UintSize - i
 		w := (hi << j) | (lo >> i)
+		// If w >= d, then we can remove d.
+		// hi >> i is the bit right above the MSB of w. If it's set, we should also remove d.
 		sel := ctGeq(w, d) | choice(hi>>i)
 		hi2 := (w - d) >> j
 		lo2 := lo - (d << i)
