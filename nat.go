@@ -12,7 +12,7 @@ const (
 	_MASK = (1 << _W) - 1
 )
 
-// choice represents a constant-time boolean
+// choice represents a constant-time boolean.
 //
 // The value of choice is always either 1 or 0.
 //
@@ -20,17 +20,21 @@ const (
 // which decision was made.
 type choice uint
 
-// ctIfElse returns x if on == 1, and y if on == 0
+// ctIfElse returns x if on == 1, and y if on == 0.
 //
 // This leaks no information about which branch was chosen.
 //
 // If on is any value besides 1 or 0, the result is undefined.
 func ctIfElse(on choice, x, y uint) uint {
+	// When on == 1, mask is 0b111..., otherwise mask is 0b000...
 	mask := -uint(on)
+	// When mask is all zeros, we just have y, otherwise, y cancels with itself
 	return y ^ (mask & (y ^ x))
 }
 
 // ctEq compares two uint values for equality
+//
+// This leaks no information about what the comparison returns.
 //
 // This works with any two uint values, not just those that fit over _W bits
 func ctEq(x, y uint) choice {
@@ -51,11 +55,17 @@ func ctGeq(x, y uint) choice {
 	return 1 ^ choice(carry)
 }
 
-// div calculates the (hi:lo / d, hi:lo % d)
+// div calculates (hi:lo / d, hi:lo % d)
+//
+// Unlike bits.Div, this function does not leak any information about its inputs.
+//
+// Furthermore, this function does not panic in exceptional situations, to avoid
+// leaking information. These include when the divisor is zero, or small enough
+// that the quotient cannot fit in a uint. Instead, constant time selection should
+// be used to handle these edge cases.
 //
 // All of the inputs are over the full size of uint.
-func div(hi, lo, d uint) (uint, uint) {
-	var quo uint
+func div(hi, lo, d uint) (quo uint, rem uint) {
 	hi = ctIfElse(ctEq(hi, d), 0, hi)
 	for i := bits.UintSize - 1; i > 0; i-- {
 		j := bits.UintSize - i
@@ -69,9 +79,9 @@ func div(hi, lo, d uint) (uint, uint) {
 		quo <<= 1
 	}
 	sel := ctGeq(lo, d) | choice(hi)
-	rem := ctIfElse(sel, lo-d, lo)
+	rem = ctIfElse(sel, lo-d, lo)
 	quo |= uint(sel)
-	return quo, rem
+	return
 }
 
 // nat represents an arbitrary natural number
