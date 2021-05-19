@@ -127,6 +127,9 @@ func (x *nat) clone() *nat {
 	return out
 }
 
+// natFromBig creates a new natural number from a big.Int
+//
+// The announced length of the resulting nat is based on the exact bit-length of the input.
 func natFromBig(x *big.Int) *nat {
 	xLimbs := x.Bits()
 	bitSize := len(xLimbs) * bits.UintSize

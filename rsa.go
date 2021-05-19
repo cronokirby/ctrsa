@@ -509,6 +509,9 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		return nil, ErrDecryption
 	}
 
+	// Note that because our private decryption exponents are stored as big.Int,
+	// we potentially leak the exact number of bits of these exponents. This isn't
+	// great, but should be fine.
 	if priv.Precomputed.Dp == nil {
 		m = new(nat).exp(c, priv.D.Bytes(), nModulus)
 	} else {
