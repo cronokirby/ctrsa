@@ -203,6 +203,9 @@ func (x *nat) fillBytes(bytes []byte) []byte {
 }
 
 // natFromBytes converts a slice of big endian bytes into a nat
+//
+// The announced length of the output depends on the number of bytes in this slice.
+// Unlike big.Int, creating a nat will not remove zeros used for padding.
 func natFromBytes(bytes []byte) *nat {
 	bits := len(bytes) * 8
 	requiredLimbs := (bits + _W - 1) / _W
@@ -225,7 +228,7 @@ func natFromBytes(bytes []byte) *nat {
 
 // cmpEq compares two natural numbers for equality
 //
-// Both operands should have the same length.
+// Both operands must have the same announced length.
 func (x *nat) cmpEq(y *nat) choice {
 	equal := choice(1)
 	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
@@ -235,6 +238,8 @@ func (x *nat) cmpEq(y *nat) choice {
 }
 
 // cmpGeq calculates x >= y, returning 1 if this holds, and 0 otherwise
+//
+// Both operands must have the same announced length
 func (x *nat) cmpGeq(y *nat) choice {
 	var c uint
 	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
@@ -245,6 +250,11 @@ func (x *nat) cmpGeq(y *nat) choice {
 	return 1 ^ choice(c)
 }
 
+// assign sets x <- y if on == 1, and does nothing otherwise
+//
+// Both operands must have the same announced length.
+//
+// No information is leaked about whether or not the assignment happened.
 func (x *nat) assign(on choice, y *nat) *nat {
 	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
 		x.limbs[i] = ctIfElse(on, y.limbs[i], x.limbs[i])
@@ -252,11 +262,11 @@ func (x *nat) assign(on choice, y *nat) *nat {
 	return x
 }
 
-// add comptues x += y, if on == 1, and otherwise does nothing
+// add comptues x += y, if on == 1, and does nothing otherwise
 //
-// The length of both operands must be the same.
+// Both operands must have the same announced length.
 //
-// The length of the operands is the only information leaked.
+// No information is leaked about whether or not the addition happened.
 func (x *nat) add(on choice, y *nat) (c uint) {
 	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
 		res := x.limbs[i] + y.limbs[i] + c
@@ -266,11 +276,11 @@ func (x *nat) add(on choice, y *nat) (c uint) {
 	return
 }
 
-// sub computes x -= y, if on == 1, and otherwise does nothing
+// sub computes x -= y, if on == 1, and does nothing otherwise
 //
-// The length of both operands must be the same.
+// Both operands must have the same announced length.
 //
-// The length of the operands is the only information leaked.
+// No information is leaked about whether or not the subtraction happened.
 func (x *nat) sub(on choice, y *nat) (c uint) {
 	for i := 0; i < len(x.limbs) && i < len(y.limbs); i++ {
 		res := x.limbs[i] - y.limbs[i] - c
@@ -280,6 +290,9 @@ func (x *nat) sub(on choice, y *nat) (c uint) {
 	return
 }
 
+// mulSub calculates x -= q * m, producing a carry value
+//
+// Both nat operands must have the same length
 func (x *nat) mulSub(q uint, m *nat) (cc uint) {
 	for i := 0; i < len(x.limbs) && i < len(m.limbs); i++ {
 		hi, lo := bits.Mul(q, m.limbs[i])
@@ -293,7 +306,12 @@ func (x *nat) mulSub(q uint, m *nat) (cc uint) {
 	return
 }
 
-// modulus is used for modular arithmetic, precomputed useful constants
+// modulus is used for modular arithmetic, precomputing relevant constants
+//
+// Moduli are assumed to be odd numbers. Moduli can also leak the exact
+// number of bits needed to store their value, and are stored without padding.
+//
+// Their actual value is still kept secret.
 type modulus struct {
 	// The underlying natural number for this modulus.
 	//
@@ -307,6 +325,9 @@ type modulus struct {
 	m0inv uint
 }
 
+// minusInverseModW computes -x^(-1) mod _W
+//
+// This operation is used to precompute a constant involved in montgomery multiplication.
 func minusInverseModW(x uint) uint {
 	y := x
 	// This is enough for 63 bits, and the extra iteration is not that costly for 31
@@ -318,11 +339,14 @@ func minusInverseModW(x uint) uint {
 
 // modulusFromNat creates a new modulus from a nat
 //
-// The nat should not be zero, and the number of significant bits in the number should be
+// The nat should be odd, nonzero, and the number of significant bits in the number should be
 // leakable.
+//
+// The nat shouldn't be modified as long as the modulus is being used.
 func modulusFromNat(nat *nat) *modulus {
 	var m modulus
 	m.nat = nat
+	// Remove any leading zeros
 	var size uint
 	for size = uint(len(m.nat.limbs)); size > 0 && m.nat.limbs[size-1] == 0; size-- {
 	}
@@ -430,6 +454,7 @@ func (out *nat) expandFor(m *modulus) *nat {
 // Both operands must already be reduced modulo m.
 func (x *nat) modSub(y *nat, m *modulus) *nat {
 	underflow := x.sub(1, y)
+	// If an underflow occurred, then adding m is sufficient to get the right result
 	x.add(choice(underflow), m.nat)
 	return x
 }
@@ -518,17 +543,24 @@ func (out *nat) montgomeryMul(x *nat, y *nat, m *modulus) *nat {
 }
 
 // modMul calculates x *= y mod m
+//
+// Both operands must already be reduced modulo m, and share its announced length.
 func (x *nat) modMul(y *nat, m *modulus) *nat {
-	xMonty := x.clone()
-	xMonty.montgomeryRepresentation(m)
+	xMonty := x.clone().montgomeryRepresentation(m)
 	x.montgomeryMul(xMonty, y, m)
 	return x
 }
 
+// exp calculates out <- x^e modulo m
+//
+// The exponent, e, is presented as bytes in big endian order.
 func (out *nat) exp(x *nat, e []byte, m *modulus) *nat {
 	size := len(m.nat.limbs)
 	out.expand(size)
 
+	// We use 4 bit windows. For our RSA workload, 4 bit windows are
+	// faster than 2 bit windows, but use an extra 12 nats worth of scratch space.
+	// Using bit sizes that don't divide 8 is a bit awkward to implements.
 	xs := make([]*nat, 15)
 	xs[0] = x.clone()
 	xs[0].montgomeryRepresentation(m)
