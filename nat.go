@@ -91,6 +91,10 @@ func div(hi, lo, d uint) (quo uint, rem uint) {
 }
 
 // nat represents an arbitrary natural number
+//
+// Each nat has an announced length, which is the number of limbs it has stored.
+// Operations on this number are allowed to leak this length, but will not leak
+// any information about the values contained in those limbs.
 type nat struct {
 	// We represent a natural number in base 2^W with W = bits.UintSize - 1.
 	// The reason for leaving the top bit of each number unset is mainly
@@ -104,6 +108,7 @@ type nat struct {
 	limbs []uint
 }
 
+// expand makes sure that x uses exactly size limbs
 func (x *nat) expand(size int) *nat {
 	if cap(x.limbs) < size {
 		newLimbs := make([]uint, size)
@@ -115,31 +120,11 @@ func (x *nat) expand(size int) *nat {
 	return x
 }
 
+// clone returns a new natural number, with the same value and announced length as x
 func (x *nat) clone() *nat {
 	out := &nat{make([]uint, len(x.limbs))}
 	copy(out.limbs, x.limbs)
 	return out
-}
-
-func (x *nat) toBig() *big.Int {
-	bitSize := len(x.limbs) * _W
-	requiredLimbs := (bitSize + bits.UintSize - 1) / bits.UintSize
-
-	out := make([]big.Word, requiredLimbs)
-	shift := big.Word(0)
-	outI := 0
-	for i := 0; i < len(x.limbs); i++ {
-		xi := big.Word(x.limbs[i])
-		out[outI] |= xi << shift
-		topShift := bits.UintSize - shift
-		if topShift <= _W {
-			outI++
-			out[outI] = xi >> topShift
-		}
-		shift = (shift + _W) % bits.UintSize
-	}
-
-	return new(big.Int).SetBits(out)
 }
 
 func natFromBig(x *big.Int) *nat {

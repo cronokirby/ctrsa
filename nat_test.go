@@ -17,20 +17,6 @@ func (*nat) Generate(r *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(&nat{limbs})
 }
 
-func testConversion(a *nat) bool {
-	aBig := a.toBig()
-	aFromBig := natFromBig(aBig)
-	aBigAgain := aFromBig.toBig()
-	return aBig.Cmp(aBigAgain) == 0
-}
-
-func TestConversion(t *testing.T) {
-	err := quick.Check(testConversion, &quick.Config{})
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func testModAddCommutative(a *nat, b *nat) bool {
 	mLimbs := make([]uint, len(a.limbs))
 	for i := 0; i < len(mLimbs); i++ {
@@ -87,15 +73,6 @@ func TestMontgomeryRoundtrip(t *testing.T) {
 	err := quick.Check(testMontgomeryRoundtrip, &quick.Config{})
 	if err != nil {
 		t.Error(err)
-	}
-}
-
-func TestToBigExamples(t *testing.T) {
-	x := &nat{[]uint{0x7FFF_FFFF_FFFF_FFFF, 0x7FFF_FFFF_FFFF_FFFF, 0b111}}
-	actual := x.toBig()
-	expected := new(big.Int).SetBits([]big.Word{0xFFFF_FFFF_FFFF_FFFF, 0xFFFF_FFFF_FFFF_FFFF, 0b1})
-	if actual.Cmp(expected) != 0 {
-		t.Errorf("%+v != %+v", actual, expected)
 	}
 }
 

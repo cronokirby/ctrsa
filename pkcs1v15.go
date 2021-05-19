@@ -58,9 +58,9 @@ func EncryptPKCS1v15(rand io.Reader, pub *PublicKey, msg []byte) ([]byte, error)
 	copy(mm, msg)
 
 	m := natFromBytes(em)
-	c := encrypt(new(nat), pub, m).toBig()
+	c := encrypt(new(nat), pub, m)
 
-	return c.FillBytes(em), nil
+	return c.fillBytes(em), nil
 }
 
 // DecryptPKCS1v15 decrypts a plaintext using RSA and the padding scheme from PKCS #1 v1.5.
@@ -282,8 +282,8 @@ func VerifyPKCS1v15(pub *PublicKey, hash crypto.Hash, hashed []byte, sig []byte)
 	}
 
 	c := natFromBytes(sig)
-	m := encrypt(new(nat), pub, c).toBig()
-	em := m.FillBytes(make([]byte, k))
+	m := encrypt(new(nat), pub, c)
+	em := m.fillBytes(make([]byte, k))
 	// EM = 0x00 || 0x01 || PS || 0x00 || T
 
 	ok := subtle.ConstantTimeByteEq(em[0], 0)
