@@ -595,6 +595,7 @@ func (out *nat) exp(x *nat, e []byte, m *modulus) *nat {
 		scratch.limbs[i] = 0
 	}
 	scratch.limbs[0] = 1
+	// By montgomery multiplying with 1, we convert back from montgomery representation
 	outC := out.clone()
 	out.montgomeryMul(outC, scratch, m)
 	return out
