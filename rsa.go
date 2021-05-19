@@ -36,7 +36,6 @@ import (
 	"github.com/cronokirby/ctrsa/internal/randutil"
 )
 
-var bigZero = big.NewInt(0)
 var bigOne = big.NewInt(1)
 
 // A PublicKey represents the public part of an RSA key.
