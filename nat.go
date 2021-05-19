@@ -414,6 +414,8 @@ func (x *nat) shiftIn(y uint, m *modulus) *nat {
 // mod calculates out = x mod m
 //
 // This works regardless how large the value of x is
+//
+// The output will be expanded and overwritten to have the correct size.
 func (out *nat) mod(x *nat, m *modulus) *nat {
 	out.expand(len(m.nat.limbs))
 	for i := 0; i < len(out.limbs); i++ {
@@ -554,6 +556,8 @@ func (x *nat) modMul(y *nat, m *modulus) *nat {
 // exp calculates out <- x^e modulo m
 //
 // The exponent, e, is presented as bytes in big endian order.
+//
+// The output will be expanded to the correct size and overwritten.
 func (out *nat) exp(x *nat, e []byte, m *modulus) *nat {
 	size := len(m.nat.limbs)
 	out.expand(size)
