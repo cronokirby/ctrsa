@@ -520,8 +520,8 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		m = new(nat).exp(cMod, priv.Precomputed.Dp.Bytes(), primeMod0)
 		cMod.mod(c, primeMod1)
 		m2 := new(nat).exp(cMod, priv.Precomputed.Dq.Bytes(), primeMod1)
-
-		m.modSub(new(nat).mod(m2, primeMod0), primeMod0)
+		// This value of cMod isn't used later, it's just convenient scratch space
+		m.modSub(cMod.mod(m2, primeMod0), primeMod0)
 		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
 		m.expandFor(nModulus)
 		// This expansion mutates primeMod1, but it never gets used anymore, so this is fine
