@@ -524,6 +524,7 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		m.modSub(new(nat).mod(m2, primeMod0), primeMod0)
 		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
 		m.expandFor(nModulus)
+		// This expansion mutates primeMod1, but it never gets used anymore, so this is fine
 		m.modMul(primeMod1.nat.expandFor(nModulus), nModulus)
 		m.modAdd(m2.expandFor(nModulus), nModulus)
 
