@@ -564,7 +564,7 @@ func (out *nat) exp(x *nat, e []byte, m *modulus) *nat {
 
 	// We use 4 bit windows. For our RSA workload, 4 bit windows are
 	// faster than 2 bit windows, but use an extra 12 nats worth of scratch space.
-	// Using bit sizes that don't divide 8 is a bit awkward to implements.
+	// Using bit sizes that don't divide 8 are a bit awkward to implement.
 	xs := make([]*nat, 15)
 	xs[0] = x.clone()
 	xs[0].montgomeryRepresentation(m)
