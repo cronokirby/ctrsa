@@ -524,8 +524,7 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 		m.modSub(new(nat).mod(m2, primeMod0), primeMod0)
 		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
 		m.expandFor(nModulus)
-		p1 := primeMod1.nat.clone().expandFor(nModulus)
-		m.modMul(p1, nModulus)
+		m.modMul(primeMod1.nat.expandFor(nModulus), nModulus)
 		m.modAdd(m2.expandFor(nModulus), nModulus)
 
 		mMod := new(nat)
