@@ -27,6 +27,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"math"
@@ -514,18 +515,37 @@ func decrypt(random io.Reader, priv *PrivateKey, c *nat) (m *nat, err error) {
 	if priv.Precomputed.Dp == nil {
 		m = new(nat).exp(c, priv.D.Bytes(), nModulus)
 	} else {
+		fmt.Println("Dp", priv.Precomputed.Dp)
+		fmt.Println("Dq", priv.Precomputed.Dq)
+		fmt.Println("Qinv", priv.Precomputed.Qinv)
+		fmt.Println()
+		fmt.Println("c", c.toBig())
 		primeMod0 := modulusFromNat(natFromBig(priv.Primes[0]))
 		primeMod1 := modulusFromNat(natFromBig(priv.Primes[1]))
 		cMod := new(nat).mod(c, primeMod0)
 		m = new(nat).exp(cMod, priv.Precomputed.Dp.Bytes(), primeMod0)
+		// 26591967719548435591973542580185350998853424293994145253797044183645351991416
+		fmt.Println("m", m.toBig())
 		cMod.mod(c, primeMod1)
 		m2 := new(nat).exp(cMod, priv.Precomputed.Dq.Bytes(), primeMod1)
-		m.modSub(m2, primeMod0)
-		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
+		// 177351655845437312508504212702089698792796753916824615626286774238529174304392
+		fmt.Println("m2", m2.toBig())
 
+		m.modSub(new(nat).mod(m2, primeMod0), primeMod0)
+		// 50850523561082019289663283448355321245322499112246354494699948625154590236610
+		fmt.Println("m", m.toBig())
+		m.modMul(natFromBig(priv.Precomputed.Qinv), primeMod0)
+		// 92861009553414007987565541134478249017817159685450343054196877766787652651673
+		fmt.Println("m", m.toBig())
 		m.expandFor(nModulus)
-		m.modMul(primeMod0.nat, nModulus)
+		fmt.Println("  m", m.toBig())
+		p1 := primeMod1.nat.clone().expandFor(nModulus)
+		m.modMul(p1, nModulus)
+		// 20566263145360669380170362513632225242901388511511262544272671652152204376148406851871467921501865579253161401209084911436766410148994168776131574624383661
+		fmt.Println("m", m.toBig())
 		m.modAdd(m2.expandFor(nModulus), nModulus)
+		// 20566263145360669380170362513632225242901388511511262544272671652152204376148584203527313358814374083465863490907877708190683234764620455550370103798688053
+		fmt.Println("m", m.toBig())
 
 		mMod := new(nat)
 		for i, values := range priv.Precomputed.CRTValues {

@@ -102,6 +102,33 @@ func TestGnuTLSKey(t *testing.T) {
 	testKeyBasics(t, priv)
 }
 
+func TestSlightlyLargeKey(t *testing.T) {
+	// This is a key with 513 bits, which introduced a regression in the CRT logic with nat
+	priv := &PrivateKey{
+		PublicKey: PublicKey{
+			N: fromBase10("22325670840144729033188698608883266685329621913510016727307079325707176763147203358403402526972540811417539438634577327881015732108465947391391089143453501"),
+			E: 65537,
+		},
+		D: fromBase10("3306421733897565344708020029873521620577831000694694941105673313323982752690901746485706121561918349761442532783321604698904420549582233144945099690685249"),
+		Primes: []*big.Int{
+			fromBase10("100805105843485448103096976785129834519632914367538412433594839340019206274793"),
+			fromBase10("221473611414173524907229347445090685432926045146132130199793967642765957327157"),
+		},
+	}
+	priv.Precompute()
+	//testKeyBasics(t, priv)
+	m := natFromBig(fromBase10("20566263145360669380170362513632225242901388511511262544272671652152204376148584203527313358814374083465863490907877708190683234764620455550370103798688053"))
+	c := encrypt(new(nat), &priv.PublicKey, m)
+	m2, err := decryptAndCheck(nil, priv, c)
+	if err != nil {
+		t.Errorf("error while decrypting: %s", err)
+		return
+	}
+	if m2.cmpEq(m) != 1 {
+		t.Errorf("got:%v, want:%v (%+v)", m2, m, priv)
+	}
+}
+
 func testKeyBasics(t *testing.T, priv *PrivateKey) {
 	if err := priv.Validate(); err != nil {
 		t.Errorf("Validate() failed: %s", err)
